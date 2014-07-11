@@ -126,6 +126,23 @@ behaviour:
       (!cdr body))
     (cons 'progn (mapcar 'namespace-convert-form body))))
 
+(defmacro namespace-compare-forms (name form-a form-b)
+  "Test if (namespace NAME FORM-A) is the same as FORM-B."
+  (declare (indent (lambda (&rest x) 0)))
+  (equal
+   (let ((namespace--name name))
+     (namespace-convert-form form-a))
+   (macroexpand-all form-b)))
+
+(defmacro namespace-compare-forms-assert (name form-a form-b)
+  "Assert if (namespace NAME FORM-A) is the same as FORM-B."
+  (declare (indent (lambda (&rest x) 0)))
+  (assert
+   (equal
+    (let ((namespace--name name))
+      (namespace-convert-form form-a))
+    (macroexpand-all form-b))))
+
 ;;;###autoload
 (defun namespace-convert-form (form)
   "Do namespace conversion on FORM.
@@ -285,5 +302,3 @@ returns nil."
 (provide 'namespace)
 
 ;;; namespace.el ends here.
-
-
