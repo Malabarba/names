@@ -44,12 +44,14 @@
 ;; 0.1a - 2014/05/20 - Created File.
 ;;; Code:
 
-;; (require 'cl)
+(require 'cl-lib)
 ;; (require 'dash)
 
 (defconst namespace-version "0.1a" "Version of the spaces.el package.")
 
 (defvar namespace--name nil)
+(defvar namespace--regexp nil)
+
 (defvar namespace--bound nil)
 (defvar namespace--fbound nil)
 
@@ -62,18 +64,15 @@
   "Non-global vars that are let/lambda bound at the moment.
 These won't be namespaced, as local takes priority over namespace.")
 
-(defmacro namespace--prepend (sbl)
-  "Return namespace+SBL."
-  `(intern (format "%s%s" namespace--name ,sbl)))
-
 (defvar namespace--protection nil
   "Leading chars used to identify protected symbols.
 Don't customise this.
 Instead use the :protection keyword when defining the
 namespace.")
 
-(defvar namespace--protection-length nil
-  "Length in chars of `namespace--protection'.")
+(defmacro namespace--prepend (sbl)
+  "Return namespace+SBL."
+  `(intern (format "%s%s" namespace--name ,sbl)))
 
 ;;;###autoload
 (defmacro namespace (name &rest body)
@@ -134,10 +133,19 @@ behaviour:
 
 \(fn NAME [KEYWORDS] BODY)"
   (declare (indent (lambda (&rest x) 0)))
+  (namespace--error-if-using-vars)
   (let ((namespace--name name)
-        (namespace--protection "\\`::")
-        (namespace--protection-length 2)
-        namespace--bound namespace--fbound
+        (namespace--regexp
+         (concat "\\`" (regexp-quote (symbol-name name))))
+        (namespace--protection "\\`:")
+        (namespace--bound
+         (namespace--remove-namespace-from-list
+          byte-compile-bound-variables
+          byte-compile-constants byte-compile-variables))
+        (namespace--fbound
+         (namespace--remove-namespace-from-list
+          (mapcar 'car byte-compile-macro-environment)
+          (mapcar 'car byte-compile-function-environment)))
         namespace--keywords namespace--local-vars)
     ;; Read keywords
     (while (keywordp (car-safe body))
@@ -149,6 +157,38 @@ behaviour:
     ;; Then we go back and actually namespace the form, which we
     ;; return so that it can be evaluated.
     (cons 'progn (mapcar 'namespace-convert-form body))))
+
+(defun namespace--error-if-using-vars ()
+  "Remind the developer that variables are not customizable."
+  (mapcar
+   (lambda (x)
+     (when (eval x) 
+       (error "Global value of variable %s should be nil! %s"
+              x "Set it using keywords instead")))
+   '(namespace--name namespace--regexp namespace--bound
+                     namespace--fbound namespace--keywords
+                     namespace--local-vars namespace--protection)))
+
+(defun namespace--remove-namespace-from-list (&rest lists)
+  "Return a concatenated un-namespaced version of LISTS.
+Symbols in LISTS that aren't namespaced are removed, symbols that
+are namespaced become un-namespaced."
+  (delq nil (mapcar 'namespace--remove-namespace (apply 'append lists))))
+
+(defun namespace--remove-namespace (symbol)
+  "Return SYMBOL with namespace removed, or nil if S wasn't namespaced."
+  (namespace--remove-regexp symbol namespace--regexp))
+
+(defun namespace--remove-protection (sym)
+  "Remove the leading :: from SYM, if it has any."
+  (namespace--remove-namespace namespace--protection sym))
+
+(defun namespace--remove-regexp (s r)
+  "Return S with regexp R removed, or nil if S didn't match."
+  (let ((name (symbol-name s)))
+    (if (string-match r name)
+        (intern (replace-match "" nil nil name))
+      s)))
 
 (defun namespace--handle-keyword (body)
   "Call the function that handles the keyword at the car of BODY.
@@ -226,23 +266,16 @@ Namespace name is defined by the global variable
        ((macrop kar)
         (namespace-convert-form (macroexpand form)))
        ;; General functions
-       (t (cons (namespace--clean-if-protected kar)
+       (t (cons (namespace--remove-protection kar)
                 (mapcar 'namespace-convert-form (cdr form)))))))
    ;; Variables
    ((symbolp form)
-    (namespace--clean-if-protected
+    (namespace--remove-protection
      (if (namespace--boundp form)
          (namespace--prepend form)
        form)))
    ;; Values
    (t form)))
-
-(defun namespace--clean-if-protected (sym)
-  "Remove the leading :: from SYM, if it has any."
-  (if (string-match namespace--protection (symbol-name sym))
-      (intern (substring (symbol-name sym)
-                         namespace--protection-length nil))
-    sym))
 
 (defun namespace--convert-defalias (form)
   "Special treatment for `defalias' FORM."
@@ -253,6 +286,19 @@ Namespace name is defined by the global variable
      (list 'quote (namespace--prepend name))
      (namespace-convert-form (cadr (cdr form))))))
 
+(defun namespace--convert-defvar (form)
+  "Special treatment for `defvar' FORM."
+  (let ((name (eval (cadr form)))) ;;ignore-errors
+    (add-to-list 'namespace--bound name)
+    (append
+     (list
+      (car form)
+      (list 'quote (namespace--prepend name)))
+     (mapcar 'namespace-convert-form (cdr (cdr form))))))
+
+(defalias 'namespace--convert-defconst 'namespace--convert-defvar
+  "Special treatment for `defconst' FORM.")
+
 (defun namespace--convert-custom-declare-variable (form)
   "Special treatment for `custom-declare-variable' FORM."
   (let ((name (eval (cadr form))) ;;ignore-errors
@@ -262,6 +308,10 @@ Namespace name is defined by the global variable
      (list
       (car form)
       (list 'quote (namespace--prepend name)) ;cadr
+      ;; The DEFAULT argument is explicitly evaluated by
+      ;; `custom-declare-variable', so it should be safe to namespace
+      ;; even when quoted. Plus, we need to do this because
+      ;; defcustom quotes this part.
       (if (namespace--quote-p (car-safe val))
           (list (car val) (namespace-convert-form (cadr val)))
         (namespace-convert-form val))
@@ -271,18 +321,20 @@ Namespace name is defined by the global variable
 (defun namespace--convert-quote (form)
   "Special treatment for `quote/function' FORM.
 When FORM is (quote argument), argument is parsed for namespacing
-only if it is a lambda form or a macro.
+only if it is a lambda form.
 
-Anything else (a symbol or an arbitrary list) is too arbitrary to
-be logically namespaced and will preserved as-is.
+Anything else (a symbol or a general list) is too arbitrary to
+be logically namespaced and will be preserved as-is.
 
-Note, however, that the value of the first argument of a
-`defalias' form is ALWAYS namespaced, regardless of whether the
-form was a quote."
+Note, however, that the value of the NAME argument of a
+\"definition-type\" forms is ALWAYS namespaced, regardless of
+whether the form was a quote."
   (let ((kadr (cadr form)))
-    (if (or (eq (car-safe kadr) 'lambda) (macrop kadr))
+    (if (eq (car-safe kadr) 'lambda)
         (list (car form) (namespace-convert-form kadr))
       form)))
+
+(defalias 'namespace--convert-function 'namespace--convert-quote)
 
 (defun namespace--convert-\` (form)
   "Special treatment for backtick FORM.
@@ -356,11 +408,11 @@ If STAR is non-nil, parse as a `let*'."
 
 (defun namespace--quote-p (sbl)
   "Is SBL a function which quotes its argument?"
-  (member sbl '(quote function lambda)))
+  (member sbl '(quote function)))
 
 (defun namespace--defvar-p (sbl)
   "Is SBL a function which defines variables?"
-  (member sbl '(defvar defvaralias defvar-local defconst defcustom defstruct)))
+  (member sbl '()))
 
 (defun namespace--defun-p (sbl)
   "Is SBL a function which defines functions?"
