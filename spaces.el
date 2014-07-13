@@ -4,7 +4,7 @@
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/namespace
-;; Version: 0.1a
+;; Version: 0.5
 ;; Keywords:
 ;; Prefix: namespace
 ;; Separator: -
@@ -50,18 +50,20 @@
 
 ;;; ---------------------------------------------------------------
 ;;; Variables
-(defconst namespace-version "0.1a" "Version of the spaces.el package.")
+(defconst namespace-version "0.5" "Version of the spaces.el package.")
 
-(defvar namespace--name nil)
-(defvar namespace--regexp nil)
+(defvar namespace--name nil
+  "Name of the current namespace inside the `namespace' macro.")
+(defvar namespace--regexp nil "Regexp matching `namespace--name'.")
 
-(defvar namespace--bound nil)
-(defvar namespace--fbound nil)
+(defvar namespace--bound nil
+  "List of variables currently known to be defined.")
+(defvar namespace--fbound nil
+  "List of functions currently known to be defined.")
 
 (defvar namespace--keywords nil
   "Keywords that were passed to the current namespace.
-
-:let-vars")
+Current possible keywords are :let-vars :global :protection")
 
 (defvar namespace--local-vars nil
   "Non-global vars that are let/lambda bound at the moment.
@@ -140,19 +142,19 @@ behaviour:
 \(fn NAME [KEYWORDS] BODY)"
   (declare (indent (lambda (&rest x) 0)))
   (namespace--error-if-using-vars)
-  (let ((namespace--name name)
-        (namespace--regexp
-         (concat "\\`" (regexp-quote (symbol-name name))))
-        (namespace--protection "\\`:")
-        (namespace--bound
-         (namespace--remove-namespace-from-list
-          byte-compile-bound-variables
-          byte-compile-constants byte-compile-variables))
-        (namespace--fbound
-         (namespace--remove-namespace-from-list
-          (mapcar 'car byte-compile-macro-environment)
-          (mapcar 'car byte-compile-function-environment)))
-        namespace--keywords namespace--local-vars)
+  (let* ((namespace--name name)
+         (namespace--regexp
+          (concat "\\`" (regexp-quote (symbol-name name))))
+         (namespace--protection "\\`:")
+         (namespace--bound
+          (namespace--remove-namespace-from-list
+           byte-compile-bound-variables
+           byte-compile-constants byte-compile-variables))
+         (namespace--fbound
+          (namespace--remove-namespace-from-list
+           (mapcar 'car byte-compile-macro-environment)
+           (mapcar 'car byte-compile-function-environment)))
+         namespace--keywords namespace--local-vars)
     ;; Read keywords
     (while (keywordp (car-safe body))
       (push (namespace--handle-keyword body) namespace--keywords)
@@ -176,9 +178,7 @@ See macro `namespace' for more information."
    ((listp form)
     (let ((kar (car form))
           func)
-      (when (namespace--defvar-p kar)
-        (add-to-list 'namespace--bound (cadr form)))
-      (cond ;; Special forms:
+      (cond
        ;; Namespaced Functions/Macros
        ((namespace--fboundp kar)
         (namespace--args-of-function-or-macro
@@ -213,7 +213,7 @@ See macro `namespace' for more information."
   (mapcar
    (lambda (x)
      (when (eval x)
-       (error "Global value of variable %s should be nil! %s"
+       (error "[spaces] Global value of variable %s should be nil! %s"
               x "Set it using keywords instead")))
    '(namespace--name namespace--regexp namespace--bound
                      namespace--fbound namespace--keywords
@@ -229,16 +229,15 @@ are namespaced become un-namespaced."
   "Return SYMBOL with namespace removed, or nil if S wasn't namespaced."
   (namespace--remove-regexp symbol namespace--regexp))
 
-(defun namespace--remove-protection (sym)
-  "Remove the leading :: from SYM if possible, otherwise return nil."
-  (namespace--remove-regexp namespace--protection sym))
+(defun namespace--remove-protection (symbol)
+  "Remove the leading :: from SYMBOL if possible, otherwise return nil."
+  (namespace--remove-regexp symbol namespace--protection))
 
 (defun namespace--remove-regexp (s r)
   "Return S with regexp R removed, or nil if S didn't match."
   (let ((name (symbol-name s)))
-    (if (string-match r name)
-        (intern (replace-match "" nil nil name))
-      s)))
+    (when (string-match r name)
+      (intern (replace-match "" nil nil name)))))
 
 (defun namespace--quote-p (sbl)
   "Is SBL a function which quotes its argument?"
@@ -269,7 +268,7 @@ returns nil."
 (defun namespace--args-of-function-or-macro (name args)
   "Check whether NAME is a function or a macro, and handle ARGS accordingly."
   (if (macrop name)
-      ;; We expand macros, and attempt again to convert the result.
+      ;; We expand macros, and attempt again to convert the resulting form.
       (namespace-convert-form (macroexpand (cons name args)))
     ;; We just convert the arguments of functions.
     (cons name (mapcar 'namespace-convert-form args))))
@@ -285,12 +284,12 @@ the :), and must return whatever information is to be stored in
 the function generally shouldn't do that. For simple keywords,
 the function can simply be an alias for `car'.
 
-However, if the keyword takes an argument, then this function
-should indeed pop the car of BODY."
+However, if the keyword takes one or more arguments, then this
+function should indeed pop the car of BODY that many times."
   (let ((func (fboundp (intern (format "namespace--keyword-%s" (car body))))))
     (if (fboundp func)
         (funcall func body)
-      (error "Keyword %s not recognized" (car body)))))
+      (error "[spaces] Keyword %s not recognized" (car body)))))
 
 (defun namespace--keyword-:protection (body)
   "Return a cons with car and cadr of BODY and pop car."
@@ -332,12 +331,12 @@ It will also be used when we implement something similar to
 
 (defun namespace--convert-defvar (form)
   "Special treatment for `defvar' FORM."
-  (let ((name (eval (cadr form)))) ;;ignore-errors
+  (let ((name (cadr form)))
     (add-to-list 'namespace--bound name)
     (append
      (list
       (car form)
-      (list 'quote (namespace--prepend name)))
+      (namespace--prepend name))
      (mapcar 'namespace-convert-form (cdr (cdr form))))))
 
 (defalias 'namespace--convert-defconst 'namespace--convert-defvar
