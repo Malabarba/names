@@ -148,12 +148,13 @@ behaviour:
          (namespace--protection "\\`:")
          (namespace--bound
           (namespace--remove-namespace-from-list
-           byte-compile-bound-variables
-           byte-compile-constants byte-compile-variables))
+           (if (boundp 'byte-compile-bound-variables) byte-compile-bound-variables)
+           (if (boundp 'byte-compile-constants) (mapcar 'car byte-compile-constants))
+           (if (boundp 'byte-compile-variables) byte-compile-variables)))
          (namespace--fbound
           (namespace--remove-namespace-from-list
-           (mapcar 'car byte-compile-macro-environment)
-           (mapcar 'car byte-compile-function-environment)))
+           (mapcar 'car (if (boundp 'byte-compile-macro-environment) byte-compile-macro-environment))
+           (mapcar 'car (if (boundp 'byte-compile-function-environment) byte-compile-function-environment))))
          namespace--keywords namespace--local-vars)
     ;; Read keywords
     (while (keywordp (car-safe body))
@@ -186,7 +187,7 @@ See macro `namespace' for more information."
        ;; Function-like forms that get special handling
        ;; That's anything with a namespace--convert-%s function defined.
        ((fboundp (setq func (intern (format "namespace--convert-%s" kar))))
-        (message "%s" func)
+        (when (namespace--keyword :verbose) (message "%s" func))
         (funcall func form))
        ;; General functions/macros
        (t
@@ -299,11 +300,13 @@ function should indeed pop the car of BODY that many times."
     (setq body (cdr body))
     (setq namespace--protection
           (format "\\`%s" (regexp-quote val)))
-    (setq namespace--protection-length (length val))
     (cons kw val)))
 
 (defalias 'namespace--keyword-:let-vars 'car
   "The :let-vars keyword indicates variables assigned in let-bind are candidates for namespacing.")
+
+(defalias 'namespace--keyword-:verbose 'car
+  "The :verbose keyword causes a message to be called on each special form.")
 
 (defalias 'namespace--keyword-:global 'car
   "The :global keyword is used to accept namespaced names from outside current namespace definition.

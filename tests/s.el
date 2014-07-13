@@ -27,8 +27,7 @@
 
 ;;; Code:
 
-(eval-when-compile
-  '(require 'spaces))
+(eval-when-compile (require 'spaces))
 
 (namespace s-
 

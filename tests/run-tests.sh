@@ -4,4 +4,6 @@ if [ -z "$EMACS" ] ; then
     EMACS="emacs"
 fi
 
-$EMACS -batch -l dev/ert.el -l dev/examples-to-tests.el -l s.elc -l dev/examples.el -f ert-run-tests-batch-and-exit
+for n in *-tests.el; do
+    $EMACS -batch -l tests.el -l "$n" -f ert-run-tests-batch-and-exit
+done;
