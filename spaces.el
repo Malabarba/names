@@ -1,4 +1,4 @@
-;;; spaces.el --- Namespace for emacs-lisp. Works like C++ namespaces to avoid name clobbering.
+;;; spaces.el --- Namespaces for emacs-lisp. Works like C++ namespaces to avoid name clobbering.
 
 ;; Copyright (C) 2014 Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -47,6 +47,9 @@
 (require 'cl-lib)
 ;; (require 'dash)
 
+
+;;; ---------------------------------------------------------------
+;;; Variables
 (defconst namespace-version "0.1a" "Version of the spaces.el package.")
 
 (defvar namespace--name nil)
@@ -74,9 +77,12 @@ namespace.")
   "Return namespace+SBL."
   `(intern (format "%s%s" namespace--name ,sbl)))
 
+
+;;; ---------------------------------------------------------------
+;;; The Main Macro and Main Function.
 ;;;###autoload
 (defmacro namespace (name &rest body)
-  "Execute BODY inside the namespace NAME.
+  "Inside the namespace NAME, execute BODY.
 NAME can be any symbol (not quoted), but it's highly recommended
 to use some form of separator (such as on of : / -).
 
@@ -158,11 +164,55 @@ behaviour:
     ;; return so that it can be evaluated.
     (cons 'progn (mapcar 'namespace-convert-form body))))
 
+(defun namespace-convert-form (form)
+  "Do namespace conversion on FORM.
+FORM is any legal elisp form.
+Namespace name is defined by the global variable `namespace--name'.
+
+See macro `namespace' for more information."
+  (cond
+   ((null form) form)
+   ;; Function calls
+   ((listp form)
+    (let ((kar (car form))
+          func)
+      (when (namespace--defvar-p kar)
+        (add-to-list 'namespace--bound (cadr form)))
+      (cond ;; Special forms:
+       ;; Namespaced Functions/Macros
+       ((namespace--fboundp kar)
+        (namespace--args-of-function-or-macro
+         (namespace--prepend kar) (cdr form)))
+       ;; Function-like forms that get special handling
+       ;; That's anything with a namespace--convert-%s function defined.
+       ((fboundp (setq func (intern (format "namespace--convert-%s" kar))))
+        (message "%s" func)
+        (funcall func form))
+       ;; General functions/macros
+       (t
+        (namespace--args-of-function-or-macro
+         ;; If symbol is protected, clean it; otherwise, use it as-is.
+         (or (namespace--remove-protection kar) kar)
+         (cdr form))))))
+   ;; Variables
+   ((symbolp form)
+    ;; If symbol is protected, clean it and don't namespace it.
+    (or (namespace--remove-protection form)
+        ;; Otherwise, namespace if possible.
+        (if (namespace--boundp form)
+            (namespace--prepend form)
+          form)))
+   ;; Values
+   (t form)))
+
+
+;;; ---------------------------------------------------------------
+;;; Some auxiliary functions
 (defun namespace--error-if-using-vars ()
   "Remind the developer that variables are not customizable."
   (mapcar
    (lambda (x)
-     (when (eval x) 
+     (when (eval x)
        (error "Global value of variable %s should be nil! %s"
               x "Set it using keywords instead")))
    '(namespace--name namespace--regexp namespace--bound
@@ -180,8 +230,8 @@ are namespaced become un-namespaced."
   (namespace--remove-regexp symbol namespace--regexp))
 
 (defun namespace--remove-protection (sym)
-  "Remove the leading :: from SYM, if it has any."
-  (namespace--remove-namespace namespace--protection sym))
+  "Remove the leading :: from SYM if possible, otherwise return nil."
+  (namespace--remove-regexp namespace--protection sym))
 
 (defun namespace--remove-regexp (s r)
   "Return S with regexp R removed, or nil if S didn't match."
@@ -190,10 +240,47 @@ are namespaced become un-namespaced."
         (intern (replace-match "" nil nil name))
       s)))
 
+(defun namespace--quote-p (sbl)
+  "Is SBL a function which quotes its argument?"
+  (memq sbl '(quote function)))
+
+(defun namespace--fboundp (sbl)
+  "Is namespace+SBL a fboundp symbol?"
+  (or (memq sbl namespace--fbound)
+      (and (namespace--keyword :global)
+           (fboundp (namespace--prepend sbl)))))
+
+(defun namespace--keyword (keyword)
+  "Was KEYWORD one of the keywords passed to the `namespace' macro?"
+  (memq keyword namespace--keywords))
+
+(defun namespace--boundp (sbl)
+  "Is namespace+SBL a boundp symbol?
+If SBL has a let binding, that takes precendence so this also
+returns nil."
+  (and (null (memq sbl namespace--local-vars))
+       (or (memq sbl namespace--bound)
+           (and (namespace--keyword :global)
+                (boundp (namespace--prepend sbl))))))
+
+
+
+;;;###autoload
+(defun namespace--args-of-function-or-macro (name args)
+  "Check whether NAME is a function or a macro, and handle ARGS accordingly."
+  (if (macrop name)
+      ;; We expand macros, and attempt again to convert the result.
+      (namespace-convert-form (macroexpand (cons name args)))
+    ;; We just convert the arguments of functions.
+    (cons name (mapcar 'namespace-convert-form args))))
+
+
+;;; ---------------------------------------------------------------
+;;; Interpreting keywords passed to the main macro.
 (defun namespace--handle-keyword (body)
   "Call the function that handles the keyword at the car of BODY.
 The function must be named `namespace--keyword-KEY' (including
-the :), and must return whatever information is to be sored in
+the :), and must return whatever information is to be stored in
 `namespace--keywords'. The car of BODY will be popped later, so
 the function generally shouldn't do that. For simple keywords,
 the function can simply be an alias for `car'.
@@ -203,7 +290,7 @@ should indeed pop the car of BODY."
   (let ((func (fboundp (intern (format "namespace--keyword-%s" (car body))))))
     (if (fboundp func)
         (funcall func body)
-      (error "keyword %s not recognized." (car body)))))
+      (error "Keyword %s not recognized" (car body)))))
 
 (defun namespace--keyword-:protection (body)
   "Return a cons with car and cadr of BODY and pop car."
@@ -216,67 +303,24 @@ should indeed pop the car of BODY."
     (setq namespace--protection-length (length val))
     (cons kw val)))
 
-(defalias 'namespace--keyword-:let-vars 'car)
+(defalias 'namespace--keyword-:let-vars 'car
+  "The :let-vars keyword indicates variables assigned in let-bind are candidates for namespacing.")
 
-(defmacro namespace-compare-forms (name form-a form-b)
-  "Test if (namespace NAME FORM-A) is the same as FORM-B."
-  (declare (indent (lambda (&rest x) 0)))
-  (equal
-   (let ((namespace--name name))
-     (namespace-convert-form form-a))
-   (macroexpand-all form-b)))
+(defalias 'namespace--keyword-:global 'car
+  "The :global keyword is used to accept namespaced names from outside current namespace definition.
+It will also be used when we implement something similar to
+`eval-defun'." )
 
-(defmacro namespace-compare-forms-assert (name form-a form-b)
-  "Assert if (namespace NAME FORM-A) is the same as FORM-B."
-  (declare (indent (lambda (&rest x) 0)))
-  (cl-assert
-   (equal
-    (let ((namespace--name name))
-      (namespace-convert-form form-a))
-    (macroexpand-all form-b)) t))
-
-;;;###autoload
-(defun namespace-convert-form (form)
-  "Do namespace conversion on FORM.
-FORM is any legal elisp form.
-Namespace name is defined by the global variable
-`namespace--name'."
-  (cond
-   ((null form) form)
-   ;; Function calls
-   ((listp form)
-    (let ((kar (car form)))
-      (when (namespace--defvar-p kar)
-        (add-to-list 'namespace--bound (cadr form)))
-      (cond ;; Special forms:
-       ;; Namespaced Functions
-       ((namespace--fboundp kar)
-        (let ((name (namespace--prepend kar)))
-          (if (macrop name)
-              (namespace-convert-form (macroexpand (cons name (cdr form))))
-            (cons name
-                  (mapcar 'namespace-convert-form (cdr form))))))
-       ;; Functions-like forms that get special handling
-       ;; That's anything with a namespace--convert-%s function defined
-       ;; Currently they are quote/function, lambda, let, cond
-       ((fboundp (intern (format "namespace--convert-%s" kar)))
-        (message "%s" (format "namespace--convert-%s" kar))
-        (funcall (intern (format "namespace--convert-%s" kar)) form))
-       ;; Macros
-       ((macrop kar)
-        (namespace-convert-form (macroexpand form)))
-       ;; General functions
-       (t (cons (namespace--remove-protection kar)
-                (mapcar 'namespace-convert-form (cdr form)))))))
-   ;; Variables
-   ((symbolp form)
-    (namespace--remove-protection
-     (if (namespace--boundp form)
-         (namespace--prepend form)
-       form)))
-   ;; Values
-   (t form)))
-
+
+;;; ---------------------------------------------------------------
+;;; Interpreting the actual forms found in BODY of the main macro.
+;;
+;; This is where the heavy work is done.
+;;
+;; If you'd like to implement support for some special form, simply
+;; define a function called `namespace--convert-FORM-NAME' along the
+;; lines of the functions defined below. It will be automatically used
+;; whenever that form is found.
 (defun namespace--convert-defalias (form)
   "Special treatment for `defalias' FORM."
   (let ((name (eval (cadr form)))) ;;ignore-errors
@@ -363,7 +407,7 @@ Currently, we just return FORM without namespacing anything."
 (defun namespace--let-var-convert-then-add (sym add)
   "Try to convert SYM if :let-vars is in use.
 If ADD is non-nil, add resulting symbol to `namespace--local-vars'."
-  (let ((name (if (memq :let-vars namespace--keywords)
+  (let ((name (if (namespace--keyword :let-vars)
                   (namespace-convert-form sym)
                 sym)))
     (when add (add-to-list 'namespace--local-vars name))
@@ -406,38 +450,26 @@ If STAR is non-nil, parse as a `let*'."
             (mapcar 'namespace-convert-form (cdr x))))
     (cdr form))))
 
-(defun namespace--quote-p (sbl)
-  "Is SBL a function which quotes its argument?"
-  (member sbl '(quote function)))
+
+;;; ---------------------------------------------------------------
+;;; Developer Utility Functions
+(defmacro namespace-compare-forms (name form-a form-b)
+  "Test if (namespace NAME FORM-A) is the same as FORM-B."
+  (declare (indent (lambda (&rest x) 0)))
+  (equal
+   (let ((namespace--name name))
+     (namespace-convert-form form-a))
+   (macroexpand-all form-b)))
 
-(defun namespace--defvar-p (sbl)
-  "Is SBL a function which defines variables?"
-  (member sbl '()))
+(defmacro namespace-compare-forms-assert (name form-a form-b)
+  "Assert if (namespace NAME FORM-A) is the same as FORM-B."
+  (declare (indent (lambda (&rest x) 0)))
+  (cl-assert
+   (equal
+    (let ((namespace--name name))
+      (namespace-convert-form form-a))
+    (macroexpand-all form-b)) t))
 
-(defun namespace--defun-p (sbl)
-  "Is SBL a function which defines functions?"
-  (member sbl '(defun defmacro defmacro* defalias defsubst defsubst*)))
+(provide 'spaces)
 
-(defun namespace--fboundp (sbl)
-  "Is namespace+SBL a fboundp symbol?"
-  (or (member sbl namespace--fbound)
-      (fboundp (namespace--prepend sbl))))
-
-(defun namespace--boundp (sbl)
-  "Is namespace+SBL a boundp symbol?
-If SBL has a let binding, that takes precendence so this also
-returns nil."
-  (and (null (member sbl namespace--local-vars))
-       (or (member sbl namespace--bound)
-           (boundp (namespace--prepend sbl)))))
-
-;;; TODO: This isn't actually used.
-(defun namespace--convert (sbl pred)
-  "Convert SBL to namespace+SBL, if (PRED SBL) is non-nil."
-  (if (funcall pred sbl)
-      (namespace--prepend sbl)
-    sbl))
-
-(provide 'namespace)
-
-;;; spaces.el ends here.
+;;; spaces.el ends here
