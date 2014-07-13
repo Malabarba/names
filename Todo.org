@@ -1,0 +1,4 @@
+* Not sure how to do:
+** Special treatment for defstruct.
+Right now it's simply being expanded.
+* Not sure whether should be done:

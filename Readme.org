@@ -1,0 +1,77 @@
+* Spaces - A Namespace implementation for Emacs-Lisp
+
+This package aims to provide a complete and robust implementation of
+(C++-like) namespaces in Emacs.
+
+This is, by far, not the first attempt at a namespace package. See
+[[https://github.com/Bruce-Connor/emacs-lisp-namespaces/blob/master/Other-Packages.org][Other-Packages.org]] for a description and comparison of previous
+attempts at this.
+
+** Why a namespace package?
+Plain and simple: Emacs doesn't have namespaces, and it needs them.
+Read below for why that's the case.
+*** The Issue
+Emacs takes the approach of prefixing every symbol name with the name
+of the package. Which, on the surface, is a rough simplification of
+how C++ handles namespaces. This successfully avoids name clashes
+between packages, but it quickly leads to code that's repetitive and
+annoying to write.
+
+Here's an example from =package.el=
+
+#+begin_src emacs-lisp
+;; ... More code above ...
+
+(defun package-initialize (&optional no-activate)
+  "Load Emacs Lisp packages, and activate them.
+The variable `package-load-list' controls which packages to load.
+If optional arg NO-ACTIVATE is non-nil, don't activate packages."
+  (interactive)
+  (setq package-alist nil)
+  (package-load-all-descriptors)
+  (package-read-all-archive-contents)
+  (unless no-activate
+    (dolist (elt package-alist)
+      (package-activate (car elt))))
+  (setq package--initialized t))
+
+;; ... More code below ...
+#+end_src
+
+*** The Solution
+This package doesn't change the overall approach, in fact, it's
+completely invisible to the end-user. It simply gives you (the
+developer) a convenient way of writing code that adheres to this
+standard.
+
+#+begin_src emacs-lisp
+(namespace package-
+;; ... More code above ...
+ 
+(defun initialize (&optional no-activate)
+  "Load Emacs Lisp packages, and activate them.
+The variable `package-load-list' controls which packages to load.
+If optional arg NO-ACTIVATE is non-nil, don't activate packages."
+  (interactive)
+  (setq alist nil)
+  (load-all-descriptors)
+  (read-all-archive-contents)
+  (unless no-activate
+    (dolist (elt alist)
+      (activate (car elt))))
+  (setq -initialized t))
+
+;;; ... More code below ...
+)
+#+end_src
+
+At runtime, this code will create the same definitions as the previous
+one. At compiletime, it will create the exact same compiled file.
+
+** Usage
+
+To use this is your package:
+
+1. Remember to list =spaces= as a dependency.
+2. Wrap all code that's to be namespaced inside a =(namespace NAME ...)= macro.
+3. Pleasantly remove 
