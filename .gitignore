@@ -1,0 +1,5 @@
+*~
+*.elc
+\#*#
+/tests/junk.el
+/la.el
