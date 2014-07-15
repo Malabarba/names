@@ -1,0 +1,3 @@
+* [[https://github.com/Wilfred/with-namespace.el][with-namespace]]
+* [[https://github.com/sigma/codex][Codex]]
+* [[https://github.com/skeeto/elisp-fakespace/][Fakespace]]
