@@ -423,13 +423,20 @@ It will also be used when we implement something similar to
 ;; define a function called `namespace--convert-FORM-NAME' along the
 ;; lines of the functions defined below. It will be automatically used
 ;; whenever that form is found.
+(defvar namespace--name-already-prefixed nil
+  "Whether some outer function already prefixed the name of the current defalias.")
+
 (defun namespace--convert-defalias (form)
   "Special treatment for `defalias' FORM."
-  (let ((name (eval (cadr form)))) ;;ignore-errors
-    (add-to-list 'namespace--fbound name)
+  (let ((dont-prefix namespace--name-already-prefixed))
+    (setq namespace--name-already-prefixed nil)
     (list
      (car form)
-     (list 'quote (namespace--prepend name))
+     (if dont-prefix
+         (cadr form)
+       (let ((name (eval (cadr form)))) ;;ignore-errors
+         (add-to-list 'namespace--fbound name)
+         (list 'quote (namespace--prepend name))))
      (namespace-convert-form (cadr (cdr form))))))
 
 ;;; Defun, defmacro, and defsubst macros are pretty predictable. So we
@@ -437,13 +444,13 @@ It will also be used when we implement something similar to
 ;;; as general macros.
 (defun namespace--convert-defun (form)
   "Special treatment for `defun' FORM."
-(let ((namespace-- ))
-  (namespace-convert-form
-   (macroexpand
-    (cons (namespace--prepend (car form))
-	  (cdr form))))))
+  (let ((namespace--name-already-prefixed t))
+    (namespace-convert-form
+     (macroexpand
+      (cons (namespace--prepend (car form))
+            (cdr form))))))
 (defalias 'namespace--convert-defmacro 'namespace--convert-defun)
-(defalias 'namespace--convert-subst 'namespace--convert-defun)
+(defalias 'namespace--convert-defsubst 'namespace--convert-defun)
 
 (defun namespace--convert-defvar (form)
   "Special treatment for `defvar' FORM."
