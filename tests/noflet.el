@@ -4,7 +4,8 @@
 
 ;; Author: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Keywords: lisp
-;; Version: 0.0.11
+;; Version: 20140202.1451
+;; X-Original-Version: 0.0.11
 ;; Url: https://github.com/nicferrier/emacs-noflet
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -57,50 +58,50 @@ name."
   (let*
       ((fsets
         (cl-loop
-         for i in bindings
-         collect
-         (cl-destructuring-bind (name args &rest body) i
-           (let ((saved-func-namev (make-symbol "saved-func-name")))
-             (let ((saved-func-namev
-                    (intern (format "saved-func-%s"
-                                    (symbol-name name)))))
-               `(fset (quote ,name)
-                      (lambda ,args
-                        (let ((this-fn ,saved-func-namev))
-                          ,@body))))))))
+           for i in bindings
+           collect
+             (cl-destructuring-bind (name args &rest body) i
+               (let ((saved-func-namev (make-symbol "saved-func-name")))
+                 (let ((saved-func-namev
+                        (intern (format "saved-func-%s"
+                                        (symbol-name name)))))
+                   `(fset (quote ,name)
+                          (lambda ,args
+                            (let ((this-fn ,saved-func-namev))
+                              ,@body))))))))
        (fresets
         (cl-loop
-         for i in bindings
-         collect
-         (cl-destructuring-bind (name args &rest body) i
-           (let ((saved-func-namev (make-symbol "saved-func-name")))
-             (let ((saved-func-namev
-                    (intern (format "saved-func-%s"
-                                    (symbol-name name)))))
-               `(if
-                    (eq (symbol-function (quote noflet|base))
-                        ,saved-func-namev)
-                    (fmakunbound (quote ,name))
-                  (fset (quote ,name) ,saved-func-namev)))))))
+             for i in bindings
+             collect
+             (cl-destructuring-bind (name args &rest body) i
+               (let ((saved-func-namev (make-symbol "saved-func-name")))
+                 (let ((saved-func-namev
+                        (intern (format "saved-func-%s"
+                                        (symbol-name name)))))
+                   `(if
+                        (eq (symbol-function (quote noflet|base))
+                            ,saved-func-namev)
+                        (fmakunbound (quote ,name))
+                        (fset (quote ,name) ,saved-func-namev)))))))
        (lets
         (cl-loop
-         for i in bindings
-         collect
-         (cl-destructuring-bind (name args &rest body) i
-           (let ((saved-func-namev (make-symbol "saved-func-name")))
-             (let ((saved-func-namev
-                    (intern (format "saved-func-%s"
-                                    (symbol-name name)))))
-               `(,saved-func-namev
-                 (condition-case err
-                     (symbol-function (quote ,name))
-                   (void-function
-                    (symbol-function (quote noflet|base)))))))))))
+           for i in bindings
+           collect
+             (cl-destructuring-bind (name args &rest body) i
+               (let ((saved-func-namev (make-symbol "saved-func-name")))
+                 (let ((saved-func-namev
+                        (intern (format "saved-func-%s"
+                                        (symbol-name name)))))
+                   `(,saved-func-namev
+                     (condition-case err
+                         (symbol-function (quote ,name))
+                       (void-function
+                        (symbol-function (quote noflet|base)))))))))))
     `(let ,lets
        (unwind-protect
-           (progn
-             (progn ,@fsets)
-             ,@forms)
+            (progn
+              (progn ,@fsets)
+              ,@forms)
          (progn ,@fresets)))))
 
 (defun noflet-indent-func (pos &rest state)
