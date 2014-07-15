@@ -151,7 +151,7 @@ This is a simple wrapper around the built-in `split-string'."
 (defun truncate (len s)
   "If S is longer than LEN, cut it down to LEN - 3 and add ... at the end."
   (if (> (length s) len)
-      (:format "%s..." (substring s 0 (- len 3)))
+      (::format "%s..." (substring s 0 (- len 3)))
     s))
 
 (defun word-wrap (len s)
@@ -321,13 +321,13 @@ This is a simple wrapper around the built-in `string-match-p'."
   "Convert S to lower case.
 
 This is a simple wrapper around the built-in `downcase'."
-  (:downcase s))
+  (::downcase s))
 
 (defun upcase (s)
   "Convert S to upper case.
 
 This is a simple wrapper around the built-in `upcase'."
-  (:upcase s))
+  (::upcase s))
 
 (defun capitalize (s)
   "Convert the first word's first character to upper case and the rest to lower case in S."
@@ -337,7 +337,7 @@ This is a simple wrapper around the built-in `upcase'."
   "Convert each word's first character to upper case and the rest to lower case in S.
 
 This is a simple wrapper around the built-in `capitalize'."
-  (:capitalize s))
+  (::capitalize s))
 
 
 (defmacro with (s form &rest more)
@@ -345,6 +345,7 @@ This is a simple wrapper around the built-in `capitalize'."
 in the first form, making a list of it if it is not a list
 already. If there are more forms, inserts the first form as the
 last item in second form, etc."
+   (declare (debug (form &rest [&or (function &rest form) fboundp])))
    (if (null more)
        (if (listp form)
            `(,(car form) ,@(cdr form) ,s)
@@ -448,7 +449,7 @@ When START is non-nil the search will start at that index."
 (defun capitalized-words (s)
   "Convert S to Capitalized words."
   (let ((words (split-words s)))
-    (join " " (cons (:capitalize (car words)) (mapcar 'downcase (cdr words))))))
+    (join " " (cons (::capitalize (car words)) (mapcar 'downcase (cdr words))))))
 
 (defun titleized-words (s)
   "Convert S to Titleized Words."
@@ -522,7 +523,7 @@ transformation."
 (defun lex-fmt|expand (fmt)
   "Expand FMT into lisp."
   (list 's-format fmt (quote 'aget)
-        (:append '(list)
+        (::append '(list)
                  (mapcar
                   (lambda (matches)
                     (list
@@ -545,6 +546,7 @@ any variable:
 The values of the variables are interpolated with \"%s\" unless
 the variable `s-lex-value-as-lisp' is `t' and then they are
 interpolated with \"%S\"."
+  (declare (debug (form)))
   (lex-fmt|expand format-str))
 
 (defun count-matches (regexp s &optional start end)
@@ -555,7 +557,8 @@ to match. "
   (with-temp-buffer
     (insert s)
     (goto-char (point-min))
-    (:count-matches regexp (or start 1) (or end (point-max)))))
+    (::count-matches regexp (or start 1) (or end (point-max)))))
+
 )
 
 (provide 's)
