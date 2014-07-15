@@ -44,6 +44,8 @@
 ;; 0.1a - 2014/05/20 - Created File.
 ;;; Code:
 
+(require 'noflet)
+(require 'edebug)
 (require 'cl-lib)
 ;; (require 'dash)
 
@@ -77,6 +79,7 @@ namespace.")
 
 (defmacro namespace--prepend (sbl)
   "Return namespace+SBL."
+  (declare (debug (form)))
   `(intern (format "%s%s" namespace--name ,sbl)))
 
 
@@ -145,7 +148,7 @@ behaviour:
   (let* ((namespace--name name)
          (namespace--regexp
           (concat "\\`" (regexp-quote (symbol-name name))))
-         (namespace--protection "\\`:")
+         (namespace--protection "\\`::")
          (namespace--bound
           (namespace--remove-namespace-from-list
            (if (boundp 'byte-compile-bound-variables) byte-compile-bound-variables)
@@ -167,6 +170,7 @@ behaviour:
     ;; return so that it can be evaluated.
     (cons 'progn (mapcar 'namespace-convert-form body))))
 
+;;;###autoload
 (defun namespace-convert-form (form)
   "Do namespace conversion on FORM.
 FORM is any legal elisp form.
@@ -182,21 +186,24 @@ See macro `namespace' for more information."
       (cond
        ;; Namespaced Functions/Macros
        ((namespace--fboundp kar)
+        (namespace--message "Namespaced: %s" kar)
         (namespace--args-of-function-or-macro
          (namespace--prepend kar) (cdr form)))
        ;; Function-like forms that get special handling
        ;; That's anything with a namespace--convert-%s function defined.
        ((fboundp (setq func (intern (format "namespace--convert-%s" kar))))
-        (when (namespace--keyword :verbose) (message "%s" func))
+        (namespace--message "Special handling: %s" func)
         (funcall func form))
        ;; General functions/macros
        (t
+        (namespace--message "Regular handling: %s" kar)
         (namespace--args-of-function-or-macro
          ;; If symbol is protected, clean it; otherwise, use it as-is.
          (or (namespace--remove-protection kar) kar)
          (cdr form))))))
    ;; Variables
    ((symbolp form)
+    (namespace--message "Symbol handling: %s" form)
     ;; If symbol is protected, clean it and don't namespace it.
     (or (namespace--remove-protection form)
         ;; Otherwise, namespace if possible.
@@ -205,6 +212,17 @@ See macro `namespace' for more information."
           form)))
    ;; Values
    (t form)))
+
+(defun namespace--message (f &rest rest)
+  "If :verbose is on, pass F and REST to `message'."
+  (when (namespace--keyword :verbose)
+    (apply 'message (concat "[spaces] " f) rest)))
+
+(defun namespace--warn (f &rest rest)
+  "Pass F and REST to `message', unless byte-compiling."
+  (unless (and (boundp 'byte-compile-function-environment)
+               byte-compile-function-environment)
+    (apply 'message (concat "[spaces] " f) rest)))
 
 
 ;;; ---------------------------------------------------------------
@@ -263,16 +281,98 @@ returns nil."
            (and (namespace--keyword :global)
                 (boundp (namespace--prepend sbl))))))
 
-
-
-;;;###autoload
 (defun namespace--args-of-function-or-macro (name args)
   "Check whether NAME is a function or a macro, and handle ARGS accordingly."
   (if (macrop name)
-      ;; We expand macros, and attempt again to convert the resulting form.
-      (namespace-convert-form (macroexpand (cons name args)))
+      ;; Macros are complicated.
+      (namespace--macro-args-using-edebug (cons name args))
     ;; We just convert the arguments of functions.
     (cons name (mapcar 'namespace-convert-form args))))
+
+(defvar namespace--is-inside-macro nil 
+  "Auxiliary var used in `namespace--macro-args-using-edebug'.")
+
+(defun namespace--macro-args-using-edebug (form)
+  "Namespace the arguments of macro FORM by hacking into edebug.
+This takes advantage of the fact that macros (should) declare a
+`debug' specification which tells us which arguments are actually
+lisp forms.
+
+Ideally, we would read this specification ourselves and see how
+it matches (cdr FORM), but that would take a lot of work and
+we'd be reimplementing something that edebug already does
+phenomenally. So we hack into edebug instead."
+  (condition-case nil
+   (car
+    (with-temp-buffer
+      (pp form 'insert)
+      (goto-char (point-min))
+      (let ((edebug-all-forms t)
+            (edebug-all-defs t)
+            (namespace--is-inside-macro 0))
+        (noflet ((edebug-form (cursor) (namespace--edebug-form cursor))
+                 (edebug-make-enter-wrapper
+                  (forms)
+                  (setq edebug-def-name
+                        (or edebug-def-name
+                            edebug-old-def-name
+                            (cl-gensym "spaces-edebug-anon")))
+                  ;; (caddr (cadr (car (last (funcall this-fn forms)))))
+                  forms))
+          (edebug-read-top-level-form)))))
+   (invalid-read-syntax
+    (namespace--warn "Couldn't namespace this macro using its (debug ...) declaration: %s"
+                     form)
+    form)))
+
+(defun namespace--edebug-form (cursor)
+  "Parse form given by CURSOR using edebug, and namespace it if necessary."
+  (require 'edebug)
+  ;; Return the instrumented form for the following form.
+  ;; Add the point offsets to the edebug-offset-list for the form.
+  (let* ((form (edebug-top-element-required cursor "Expected form"))
+         (offset (edebug-top-offset cursor))
+         ;; This variable equals the current `namespace--edebug-form' depth.
+
+         ;; We don't want to convert the entire form that was passed
+         ;; to `namespace--macro-args-using-edebug' (= level 0), since
+         ;; the head of that was already converted and it would lead
+         ;; to an infinite loop.
+
+         ;; We DO want to convert the arguments that edebug identifies
+         ;; as forms (= level 1).
+         
+         ;; We also don't want to do anything once we're inside these
+         ;; level-1 arguments (>= level 2), because that will already
+         ;; be done by our own recursion when we call
+         ;; `namespace-convert-fore' on the level-1 forms.
+         
+         (func (if (= namespace--is-inside-macro 1) 'namespace-convert-form 'identity))
+         (namespace--is-inside-macro (1+ namespace--is-inside-macro)))
+    (namespace--message " [Edebug] ran into this: %S" form)
+    (prog1
+        (cond
+         ((consp form) ;; The first offset for a list form is for the list form itself.
+          (let* ((head (car form))
+                 (spec (and (symbolp head) (get-edebug-spec head)))
+                 (new-cursor (edebug-new-cursor form offset)))
+            ;; Find out if this is a defining form from first symbol.
+            ;; An indirect spec would not work here, yet.
+            (if (and (consp spec) (eq '&define (car spec)))
+                (edebug-defining-form
+                 new-cursor
+                 (car offset) ;; before the form
+                 (edebug-after-offset cursor)
+                 (cons (symbol-name head) (cdr spec)))
+              ;; Wrap a regular form.
+              (funcall func (edebug-list-form new-cursor)))))
+
+         ((symbolp form)
+          (funcall func form))
+
+         ;; Anything else is self-evaluating.
+         (t form))
+      (edebug-move-cursor cursor))))
 
 
 ;;; ---------------------------------------------------------------
@@ -287,7 +387,7 @@ the function can simply be an alias for `car'.
 
 However, if the keyword takes one or more arguments, then this
 function should indeed pop the car of BODY that many times."
-  (let ((func (fboundp (intern (format "namespace--keyword-%s" (car body))))))
+  (let ((func (intern (format "namespace--keyword-%s" (car body)))))
     (if (fboundp func)
         (funcall func body)
       (error "[spaces] Keyword %s not recognized" (car body)))))
@@ -332,6 +432,19 @@ It will also be used when we implement something similar to
      (list 'quote (namespace--prepend name))
      (namespace-convert-form (cadr (cdr form))))))
 
+;;; Defun, defmacro, and defsubst macros are pretty predictable. So we
+;;; expand them and handle them like defaliases, instead of handling
+;;; as general macros.
+(defun namespace--convert-defun (form)
+  "Special treatment for `defun' FORM."
+(let ((namespace-- ))
+  (namespace-convert-form
+   (macroexpand
+    (cons (namespace--prepend (car form))
+	  (cdr form))))))
+(defalias 'namespace--convert-defmacro 'namespace--convert-defun)
+(defalias 'namespace--convert-subst 'namespace--convert-defun)
+
 (defun namespace--convert-defvar (form)
   "Special treatment for `defvar' FORM."
   (let ((name (cadr form)))
@@ -344,6 +457,23 @@ It will also be used when we implement something similar to
 
 (defalias 'namespace--convert-defconst 'namespace--convert-defvar
   "Special treatment for `defconst' FORM.")
+
+(defun namespace--convert-defvaralias (form)
+  "Special treatment for `defvaralias' FORM."
+  (let ((name (eval (cadr form)))
+        (name2 (eval (caddr form))))
+    (add-to-list 'namespace--bound name)
+    (append
+     (list
+      (car form)
+      (list 'quote (namespace--prepend name))
+      (list 'quote (namespace-convert-form name2)))
+     (mapcar 'namespace-convert-form (cdr (cdr form))))))
+
+(defun namespace--convert-defcustom (form)
+  "Special treatment for `defcustom' FORM."
+  (namespace--convert-custom-declare-variable
+   (macroexpand form)))
 
 (defun namespace--convert-custom-declare-variable (form)
   "Special treatment for `custom-declare-variable' FORM."
