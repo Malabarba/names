@@ -17,15 +17,12 @@ how C++ handles namespaces. This successfully avoids name clashes
 between packages, but it quickly leads to code that's repetitive and
 annoying to write.
 
-Here's an example from =package.el=
+Here's an example from =package.el=, the word /"package"/ is repeated
+7 times in a 10-line function definition.
 
 #+begin_src emacs-lisp
-;; ... More code above ...
-
 (defun package-initialize (&optional no-activate)
-  "Load Emacs Lisp packages, and activate them.
-The variable `package-load-list' controls which packages to load.
-If optional arg NO-ACTIVATE is non-nil, don't activate packages."
+  "[Doc String]"
   (interactive)
   (setq package-alist nil)
   (package-load-all-descriptors)
@@ -34,8 +31,6 @@ If optional arg NO-ACTIVATE is non-nil, don't activate packages."
     (dolist (elt package-alist)
       (package-activate (car elt))))
   (setq package--initialized t))
-
-;; ... More code below ...
 #+end_src
 
 *** The Solution
@@ -46,12 +41,10 @@ standard.
 
 #+begin_src emacs-lisp
 (namespace package-
-;; ... More code above ...
- 
+;; The rest of the package code goes in here as well.
+
 (defun initialize (&optional no-activate)
-  "Load Emacs Lisp packages, and activate them.
-The variable `package-load-list' controls which packages to load.
-If optional arg NO-ACTIVATE is non-nil, don't activate packages."
+  "[Doc String]"
   (interactive)
   (setq alist nil)
   (load-all-descriptors)
@@ -60,18 +53,18 @@ If optional arg NO-ACTIVATE is non-nil, don't activate packages."
     (dolist (elt alist)
       (activate (car elt))))
   (setq -initialized t))
-
-;;; ... More code below ...
 )
 #+end_src
 
-At runtime, this code will create the same definitions as the previous
-one. At compiletime, it will create the exact same compiled file.
+- At runtime, this code will create the same definitions as the previous one. 
+- At compilation, it will create the exact same compiled file.
 
 ** Usage
 
-To use this is your package:
+To use this in your package:
 
 1. Remember to list =spaces= as a dependency.
 2. Wrap all code that's to be namespaced inside a =(namespace NAME ...)= macro.
-3. Pleasantly remove 
+3. Pleasantly remove all that redundant repetition from you code!
+
+*** Examples
