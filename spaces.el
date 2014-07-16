@@ -59,9 +59,11 @@
 (defvar namespace--regexp nil "Regexp matching `namespace--name'.")
 
 (defvar namespace--bound nil
-  "List of variables currently known to be defined.")
+  "List of variables defined in this namespace.")
 (defvar namespace--fbound nil
-  "List of functions currently known to be defined.")
+  "List of functions defined in this namespace.")
+(defvar namespace--macro nil 
+  "List of macros defined in this namespace.")
 
 (defvar namespace--keywords nil
   "Keywords that were passed to the current namespace.
@@ -151,13 +153,17 @@ behaviour:
          (namespace--protection "\\`::")
          (namespace--bound
           (namespace--remove-namespace-from-list
-           (if (boundp 'byte-compile-bound-variables) byte-compile-bound-variables)
-           (if (boundp 'byte-compile-constants) (mapcar 'car byte-compile-constants))
-           (if (boundp 'byte-compile-variables) byte-compile-variables)))
+           (namespace--filter-if-bound byte-compile-bound-variables)
+           (namespace--filter-if-bound byte-compile-constants)
+           (namespace--filter-if-bound byte-compile-variables)))
          (namespace--fbound
           (namespace--remove-namespace-from-list
-           (mapcar 'car (if (boundp 'byte-compile-macro-environment) byte-compile-macro-environment))
-           (mapcar 'car (if (boundp 'byte-compile-function-environment) byte-compile-function-environment))))
+           (namespace--filter-if-bound byte-compile-macro-environment 'macrop)
+           (namespace--filter-if-bound byte-compile-function-environment 'macrop)))
+         (namespace--macro
+          (namespace--remove-namespace-from-list
+           (namespace--filter-if-bound byte-compile-macro-environment (lambda (x) (not (macrop x))))
+           (namespace--filter-if-bound byte-compile-function-environment (lambda (x) (not (macrop x))))))
          namespace--keywords namespace--local-vars)
     ;; Read keywords
     (while (keywordp (car-safe body))
@@ -169,6 +175,13 @@ behaviour:
     ;; Then we go back and actually namespace the form, which we
     ;; return so that it can be evaluated.
     (cons 'progn (mapcar 'namespace-convert-form body))))
+
+(defmacro namespace--filter-if-bound (var &optional pred)
+  "If VAR is bound and is a list, take the car of its elements which satify PRED."
+  (declare (debug (symbolp function-form)))
+  (when (boundp var)
+    `(cl-remove-if
+      ,pred (mapcar (lambda (x) (or (car-safe x) x)) ,var))))
 
 ;;;###autoload
 (defun namespace-convert-form (form)
@@ -188,7 +201,7 @@ See macro `namespace' for more information."
        ((namespace--fboundp kar)
         (namespace--message "Namespaced: %s" kar)
         (namespace--args-of-function-or-macro
-         (namespace--prepend kar) (cdr form)))
+         (namespace--prepend kar) (cdr form) (namespace--macrop kar)))
        ;; Function-like forms that get special handling
        ;; That's anything with a namespace--convert-%s function defined.
        ((fboundp (setq func (intern (format "namespace--convert-%s" kar))))
@@ -197,10 +210,10 @@ See macro `namespace' for more information."
        ;; General functions/macros
        (t
         (namespace--message "Regular handling: %s" kar)
-        (namespace--args-of-function-or-macro
-         ;; If symbol is protected, clean it; otherwise, use it as-is.
-         (or (namespace--remove-protection kar) kar)
-         (cdr form))))))
+        ;; If symbol is protected, clean it; otherwise, use it as-is.
+        (let ((clean-kar (or (namespace--remove-protection kar) kar)))
+          (namespace--args-of-function-or-macro
+           clean-kar (cdr form) (macrop clean-kar)))))))
    ;; Variables
    ((symbolp form)
     (namespace--message "Symbol handling: %s" form)
@@ -235,6 +248,7 @@ See macro `namespace' for more information."
        (error "[spaces] Global value of variable %s should be nil! %s"
               x "Set it using keywords instead")))
    '(namespace--name namespace--regexp namespace--bound
+                     namespace--macro
                      namespace--fbound namespace--keywords
                      namespace--local-vars namespace--protection)))
 
@@ -265,8 +279,15 @@ are namespaced become un-namespaced."
 (defun namespace--fboundp (sbl)
   "Is namespace+SBL a fboundp symbol?"
   (or (memq sbl namespace--fbound)
+      (memq sbl namespace--macro)
       (and (namespace--keyword :global)
            (fboundp (namespace--prepend sbl)))))
+
+(defun namespace--macrop (sbl)
+  "Is namespace+SBL a fboundp symbol?"
+  (or (memq sbl namespace--macro)
+      (and (namespace--keyword :global)
+           (macrop (namespace--prepend sbl)))))
 
 (defun namespace--keyword (keyword)
   "Was KEYWORD one of the keywords passed to the `namespace' macro?"
@@ -281,9 +302,9 @@ returns nil."
            (and (namespace--keyword :global)
                 (boundp (namespace--prepend sbl))))))
 
-(defun namespace--args-of-function-or-macro (name args)
+(defun namespace--args-of-function-or-macro (name args macro)
   "Check whether NAME is a function or a macro, and handle ARGS accordingly."
-  (if (macrop name)
+  (if macro
       ;; Macros are complicated.
       (namespace--macro-args-using-edebug (cons name args))
     ;; We just convert the arguments of functions.
@@ -444,11 +465,15 @@ It will also be used when we implement something similar to
 ;;; as general macros.
 (defun namespace--convert-defun (form)
   "Special treatment for `defun' FORM."
-  (let ((namespace--name-already-prefixed t))
+  (let ((namespace--name-already-prefixed t)
+        (name (cadr form)))
+    (add-to-list 'namespace--fbound name)
     (namespace-convert-form
      (macroexpand
-      (cons (namespace--prepend (car form))
-            (cdr form))))))
+      (cons
+       (car form)
+       (cons (namespace--prepend name)
+             (cddr form)))))))
 (defalias 'namespace--convert-defmacro 'namespace--convert-defun)
 (defalias 'namespace--convert-defsubst 'namespace--convert-defun)
 
