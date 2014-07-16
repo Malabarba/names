@@ -121,12 +121,12 @@ Return nil, used for side-effects only."
   (declare (debug (form form)))
   `(mapcar (lambda (it) ,form) ,list))
 
-(macroexpand '(defmacro -reduce-from (form initial-value list)
+(defmacro -reduce-from (form initial-value list)
   "Anaphoric form of `-reduce-from'."
   (declare (debug (form form form)))
   `(let ((acc ,initial-value))
      (--each ,list (setq acc ,form))
-     acc)))
+     acc))
 
 (defun reduce-from (fn initial-value list)
   "Return the result of applying FN to INITIAL-VALUE and the
@@ -203,7 +203,7 @@ associates from right instead of from left."
   (let ((r (make-symbol "result")))
     `(let (,r)
        (--each ,list (when ,form (!cons it ,r)))
-       (nreverse ,r)))))
+       (nreverse ,r))))
 
 (defun filter (pred list)
   "Return a new list of the items in LIST for which PRED returns a non-nil value.
@@ -211,8 +211,8 @@ associates from right instead of from left."
 Alias: `-select'"
   (-filter (funcall pred it) list))
 
+(defalias 'select 'filter)
 (defalias '-select '-filter)
-(defalias '--select '--filter)
 
 (defmacro -remove (form list)
   "Anaphoric form of `-remove'."
@@ -225,8 +225,8 @@ Alias: `-select'"
 Alias: `-reject'"
   (-remove (funcall pred it) list))
 
+(defalias 'reject 'remove)
 (defalias '-reject '-remove)
-(defalias '--reject '--remove)
 
 (defmacro -keep (form list)
   "Anaphoric form of `-keep'."
@@ -274,8 +274,8 @@ Alias: `-replace-where'
 See also: `-update-at'"
   (-map-when (funcall pred it) (funcall rep it) list))
 
+(defalias 'replace-where 'map-when)
 (defalias '-replace-where '-map-when)
-(defalias '--replace-where '--map-when)
 
 (defun replace (old new list)
   "Replace all OLD items in LIST with NEW.
@@ -381,8 +381,8 @@ To get the first item in the list no questions asked, use `car'.
 Alias: `-find'"
   (-first (funcall pred it) list))
 
-(defalias 'find '-first)
-(defalias '-find '--first)
+(defalias 'find 'first)
+(defalias '-find '-first)
 
 (defmacro -last (form list)
   "Anaphoric form of `-last'."
@@ -438,12 +438,12 @@ Alias: `-find'"
 Alias: `-any-p', `-some?', `-some-p'"
   (-any? (funcall pred it) list))
 
-(defalias 'some? '-any?)
-(defalias '-some? '--any?)
-(defalias 'any-p '-any?)
-(defalias '-any-p '--any?)
-(defalias 'some-p '-any?)
-(defalias '-some-p '--any?)
+(defalias 'some? 'any?)
+(defalias '-some? '-any?)
+(defalias 'any-p 'any?)
+(defalias '-any-p '-any?)
+(defalias 'some-p 'any?)
+(defalias '-some-p '-any?)
 
 (defmacro -all? (form list)
   "Anaphoric form of `-all?'."
@@ -459,12 +459,12 @@ Alias: `-any-p', `-some?', `-some-p'"
 Alias: `-all-p', `-every?', `-every-p'"
   (-all? (funcall pred it) list))
 
-(defalias 'every? '-all?)
-(defalias '-every? '--all?)
-(defalias 'all-p '-all?)
-(defalias '-all-p '--all?)
-(defalias 'every-p '-all?)
-(defalias '-every-p '--all?)
+(defalias 'every? 'all?)
+(defalias '-every? '-all?)
+(defalias 'all-p 'all?)
+(defalias '-all-p '-all?)
+(defalias 'every-p 'all?)
+(defalias '-every-p '-all?)
 
 (defmacro -none? (form list)
   "Anaphoric form of `-none?'."
@@ -477,8 +477,8 @@ Alias: `-all-p', `-every?', `-every-p'"
 Alias: `-none-p'"
   (-none? (funcall pred it) list))
 
-(defalias 'none-p '-none?)
-(defalias '-none-p '--none?)
+(defalias 'none-p 'none?)
+(defalias '-none-p '-none?)
 
 (defmacro -only-some? (form list)
   "Anaphoric form of `-only-some?'."
@@ -497,8 +497,8 @@ Return `nil` both if all items match the predicate or if none of the items match
 Alias: `-only-some-p'"
   (-only-some? (funcall pred it) list))
 
-(defalias 'only-some-p '-only-some?)
-(defalias '-only-some-p '--only-some?)
+(defalias 'only-some-p 'only-some?)
+(defalias '-only-some-p '-only-some?)
 
 (defun slice (list from &optional to step)
   "Return copy of LIST, starting from index FROM to index TO.
@@ -702,7 +702,7 @@ This function can be thought of as a generalization of
   (let ((result nil)
         (len 0))
     (while list
-      (!cons (take n list) result)
+      (!cons (-take n list) result)
       (setq list (drop step list)))
     result))
 
@@ -1093,9 +1093,9 @@ permutation vector such that applying this permutation to LIST
 sorts it in ascending order."
   ;; ugly hack to "fix" lack of lexical scope
   (let ((comp `(lambda (it other) (funcall ',comparator (car it) (car other)))))
-    (>> (-map-indexed (cons it it-index) list)
-      (sort comp)
-      (map 'cdr))))
+    (>> (--map-indexed (cons it it-index) list)
+      (-sort comp)
+      (-map 'cdr))))
 
 (defun grade-down (comparator list)
   "Grade elements of LIST using COMPARATOR relation, yielding a
@@ -1103,9 +1103,9 @@ permutation vector such that applying this permutation to LIST
 sorts it in descending order."
   ;; ugly hack to "fix" lack of lexical scope
   (let ((comp `(lambda (it other) (funcall ',comparator (car other) (car it)))))
-    (>> (-map-indexed (cons it it-index) list)
-      (sort comp)
-      (map 'cdr))))
+    (>> (--map-indexed (cons it it-index) list)
+      (-sort comp)
+      (-map 'cdr))))
 
 (defmacro when-let (var-val &rest body)
   "If VAL evaluates to non-nil, bind it to VAR and execute body.
@@ -1182,7 +1182,7 @@ Alias: `-uniq'"
     (-each list (unless (contains? result it) (!cons it result)))
     (nreverse result)))
 
-(defalias 'uniq '-distinct)
+(defalias 'uniq 'distinct)
 
 (defun union (list list2)
   "Return a new list containing the elements of LIST1 and elements of LIST2 that are not in LIST1.
@@ -1231,7 +1231,7 @@ Alias: `-contains-p'"
           (setq lst (cdr lst)))
         lst))))))
 
-(defalias 'contains-p '-contains?)
+(defalias 'contains-p 'contains?)
 
 (defun same-items? (list list2)
   "Return true if LIST and LIST2 has the same items.
@@ -1245,7 +1245,7 @@ Alias: `-same-items-p'"
      (= length-a length-b)
      (= length-a (length (intersection list list2))))))
 
-(defalias 'same-items-p '-same-items?)
+(defalias 'same-items-p 'same-items?)
 
 (defun is-prefix? (prefix list)
   "Return non-nil if PREFIX is prefix of LIST.
@@ -1273,16 +1273,16 @@ Alias: `-is-infix-p'"
       (!cdr list))
     done))
 
-(defalias 'is-prefix-p '-is-prefix?)
-(defalias 'is-suffix-p '-is-suffix?)
-(defalias 'is-infix-p '-is-infix?)
+(defalias 'is-prefix-p 'is-prefix?)
+(defalias 'is-suffix-p 'is-suffix?)
+(defalias 'is-infix-p 'is-infix?)
 
 (defun sort (comparator list)
   "Sort LIST, stably, comparing elements using COMPARATOR.
 Return the sorted list.  LIST is NOT modified by side effects.
 COMPARATOR is called with two elements of LIST, and should return non-nil
 if the first element should sort before the second."
-  (sort (copy-sequence list) comparator))
+  (::sort (copy-sequence list) comparator))
 
 (defmacro -sort (form list)
   "Anaphoric form of `-sort'."
