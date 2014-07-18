@@ -468,10 +468,12 @@ It will also be used when we implement something similar to
 ;;; Defun, defmacro, and defsubst macros are pretty predictable. So we
 ;;; expand them and handle them like defaliases, instead of handling
 ;;; as general macros.
-(defun namespace--convert-defun (form)
-  "Special treatment for `defun' FORM."
-  (let ((namespace--name-already-prefixed t)
-        (name (cadr form)))
+
+(defun namespace--convert-defmacro (form)
+  "Special treatment for `defmacro' FORM."
+  (let* ((namespace--name-already-prefixed t)
+         (name (cadr form)))
+    (add-to-list 'namespace--macro name)
     (add-to-list 'namespace--fbound name)
     (namespace-convert-form
      (macroexpand
@@ -479,8 +481,7 @@ It will also be used when we implement something similar to
        (car form)
        (cons (namespace--prepend name)
              (cddr form)))))))
-(defalias 'namespace--convert-defmacro 'namespace--convert-defun)
-(defalias 'namespace--convert-defsubst 'namespace--convert-defun)
+(defalias 'namespace--convert-defmacro* 'namespace--convert-defmacro)
 
 (defun namespace--convert-defvar (form)
   "Special treatment for `defvar' FORM."
