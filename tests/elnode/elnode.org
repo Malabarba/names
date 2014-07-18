@@ -1,0 +1,235 @@
+
+* process logging
+** log to a process
+** code like this
+(defun nic-make-log-process (filename)
+  (let ((log-name (format "*log-%s*" filename))
+        (buf-name (concat " " log-name)))
+  (start-process-shell-command
+   log-name (get-buffer-create buf-name)
+   (format
+    "while read line ; do echo $line >> %s ; done"
+    filename))))
+(setq nic-logger (nic-make-log-process))
+(process-send-string nic-logger "hello!\n")
+(process-send-string nic-logger "goodbye!\n")
+(process-send-eof nic-logger)
+** elnode-log-buffer-log does logging
+*** it takes text, buffer-or-name
+*** buffer-or-name could be a process?
+
+* planned FAQ
+** FAQ for installation
+*** why does it not start?
+**** have you got something running on port 8000?
+**** how to change the port and restart
+
+** programming
+*** what's a hello world handler look like?
+**** the simplest elnode handler is
+(defun hello-world (httpcon)
+  (elnode-send-html httpcon "Hello World"))
+
+*** how do I start a handler?
+**** using M-x elnode-start [RET] handler-name
+***** the handler-name is any function
+***** it will complete in the normal minibuffer way
+*** how can I make a handler serve some static files?
+**** so easy, like this:
+(setq my-webserver-handler (elnode-webserver-handler-maker "~/directory"))
+*** what if I want to do something a bit unusual to the file before it's served? like tempalting
+**** you need to write a proper handler for that
+**** let's say you want to replace {{{name}}} with a single word
+(defun my-files-handler (httpcon)
+  (elnode-docroot-for DIRECTORY
+     with target-filename
+     on httpcon
+     do
+     (with-current-buffer (find-file-noselect target-filename)
+       (elnode-http-start httpcon 200 '("Content-type" . "text/html"))
+       (elnode-http-return 
+          httpcon 
+          (replace-regexp-in-string "{{{\\(.*\\)}}}" "bleh"
+              (buffer-substring (point-min) (point-max)))))))
+*** the logging is crazy, can I turn if off?
+**** yep. 
+M-x customize-variable [RET] elnode-log-files-directory
+**** and
+M-x customize-variable [RET] elnode-error-log-to-messages
+**** are 2 interesting ones
+
+** Other questions
+*** What if my friends laugh at me for running a web browser in my editor?
+**** Get better friends? #emacs is a good source of fun people
+**** Alternately start a new business that uses elnode and pisses on the competition
+***** because it is faster and more reliable.
+***** then buy new friends.
+**** Or go back to using Ruby because Ruby is, ya know, really cool. Like your friends say.
+
+
+* auth stuff
+** things auth requires
+*** test
+**** are you currently authenticated?
+**** most often this is testing a cookie
+**** on success do whatever you were going to do
+*** failure action
+**** redirect to a login page
+**** serve a login page
+
+** login pages
+*** test
+**** are the credentials correct?
+*** success
+**** set a token to remember the request somehow
+***** store something in the server?
+****** so you can validatethe auth
+******* login makes token
+******* store token against username
+******* put token:username:server-secretkey on cookie
+******* 
+**** redirect to some page
+***** maybe identified by a parameter or the referrer
+*** failure
+**** redirect to a login failed page
+**** return the same page with errors
+*** links
+**** registration page
+
+
+(with-elnode-auth 
+   (:test cookie
+    :cookie-name my-auth
+    :failure-type redirect
+    :redirect "/mylogin")
+   ...)
+
+:redirect could be:
+
+ a string - which would point to a relative or absolute url which must
+   be mapped indepentently
+
+ a (dispatcher . handler) pair - a cons of a dispatcher and a handler,
+   the dispatcher is automatically wrapped with a detector for a url
+   that serves the handler
+ 
+ a (dispatcher handler string) list - as for the 
+   dispatcher/handler cons but with the addition of the string to name 
+   the url to login
+
+** idea about data/handlers
+*** for login, the processing of the authentication request (the username and password check) is the bit we can specify as part of the auth system
+**** it goes
+***** get a username/password
+****** and possibly other things like "cookie approval"
+***** check against database
+****** plus any other rules, like "cookie approval is yes"
+***** make cookie
+***** redirect to wherever we were supposed to be redirecting
+****** this could have been specified
+******* as a parameter
+******* or it could be fixed
+******* or looked up in the server side environment
+*** the bit we can't specify
+**** the look of the login page
+**** or even the url of the login page
+**** or how the login page works
+***** we need to be able to support AJAX login
+***** so you can login from the main page and from non-contextual flows
+*** it's frustrating because the only thing we care about on the login page is
+**** the login form, which is very specifiable
+**** particularly the url which the form POSTs to
+***** which must have our auth handler on the end of it
+*** so we need a high level abstraction for dealing with this
+*** if we could specify interactive elements, like FORMs as
+**** a description of the data
+**** possibly a template
+***** it should be possible to have a default template
+***** client side template?
+**** the handler code to handle the call
+*** and then have those wrap in the same way as the (dispatcher . handler) form above
+*** reasons this would be good
+**** the separate description of the data means it could be used for ajax and context pages
+**** the template is optional
+***** maybe we could have contextual templates as well
+****** a template for ajax
+****** a template for page
+**** the authentication processor is probably fixed
+**** this could be the tip of a larger abstraction to do better website building
+
+how about we make a function to return a wrap spec?
+
+like this:
+
+(with-elnode-auth 
+   (:test cookie
+    :cookie-name my-auth
+    :failure-type redirect
+    :redirect (elnode-make-auth-wrap 'my-app form-template))
+   ...)
+
+where (elnode-make-auth-wrap to-wrap template &optional path) 
+  => '(my-app (lambda (httpcon) (do-something-with template)) path)
+
+** templates for auth - capturing some thoughts
+*** the current vogue is for mustache like templates
+*** these are dumb text replacers
+*** I prefer sed/xslt like templates
+**** not dumb, but more introspectively transformative
+*** can we make a simpler, less generic, transform language than xslt?
+*** it needs to transform data, such as json into HTML or XML
+*** things it might be
+**** a sequence of rules
+***** for this bit of data, do this
+****** { "password": "" } -> <label for="login_password">Password:</label><input id="login_password" type="password" name="password"/>
+***** questions about this
+****** what's the pattern matching language???
+****** how do we link the "things" together?
+******* eg: BR tags?
+******* wrapping individually in DIVs?
+**** a bunch of associated rules
+***** wrap everything we produce in some tag
+****** eg: FORM tags
+
+
+* v0.9.9 todo
+** new async stuff with RLE
+** default wiki page and webserver root
+
+* screencasts
+** introducing elnode
+*** start with plain emacs24
+*** install marmalade
+*** install elnode
+*** what does elnode do out of the box?
+**** webserver
+**** wiki
+**** auth database
+**** logging
+** programming with elnode
+*** start with some files
+*** make a webserver with elnode-webserver-handler-maker
+*** org-mode
+** chat
+*** what do you need?
+**** a list to store chat
+***** a list of triples? (username date text)
+**** a handler to receive the chats
+***** a POST or something
+**** a handler for people to call to wait and receive chats
+***** should use elnode-defer-or-do to check for new chats
+* v1.00 todo
+** stuff
+*** vagrant image
+*** heroku update
+**** vulcan helps build the version of unix you need to host the build pack
+***** http://quickleft.com/blog/hacking-heroku-with-custom-build-packs
+**** the buildpack
+***** https://github.com/technomancy/heroku-buildpack-emacs/tree/master/bin
+*** ami?
+** code
+*** defer bugs?
+*** logging to processes
+*** client server stuff
+*** htmlize bugs?
+**** these seem to be fixed by new creole
