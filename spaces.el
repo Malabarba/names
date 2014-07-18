@@ -641,6 +641,19 @@ If STAR is non-nil, parse as a `let*'."
             (mapcar 'namespace-convert-form (cdr x))))
     (cdr form))))
 
+(defun namespace--convert-condition-case (form)
+  "Special treatment for `condition-case' FORM."
+  (append
+   (list
+    (car form)
+    (cadr form)
+    (namespace-convert-form (cadr (cdr form))))
+   (mapcar
+    (lambda (x)
+      (cons (car x)
+            (mapcar 'namespace-convert-form (cdr x))))
+    (cddr (cdr form)))))
+
 
 ;;; ---------------------------------------------------------------
 ;;; Developer Utility Functions
