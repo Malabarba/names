@@ -1,4 +1,4 @@
-;;; spaces-dev.el --- 
+;;; spaces-dev.el --- Developer Functions to facilitate use of spaces.el on your package.
 
 ;; Copyright (C) 2014 Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -46,24 +46,24 @@
 
 ;;; ---------------------------------------------------------------
 ;;; Developer Utility Functions
-(defmacro namespace-compare-forms (name form-a form-b)
+(defmacro spaces-compare-forms (name form-a form-b)
   "Test if (namespace NAME FORM-A) is the same as FORM-B."
   (declare (indent (lambda (&rest x) 0)))
   (equal
-   (let ((namespace--name name))
-     (namespace-convert-form form-a))
+   (let ((spaces--name name))
+     (spaces-convert-form form-a))
    (macroexpand-all form-b)))
 
-(defmacro namespace-compare-forms-assert (name form-a form-b)
+(defmacro spaces-compare-forms-assert (name form-a form-b)
   "Assert if (namespace NAME FORM-A) is the same as FORM-B."
   (declare (indent (lambda (&rest x) 0)))
   (cl-assert
    (equal
-    (let ((namespace--name name))
-      (namespace-convert-form form-a))
+    (let ((spaces--name name))
+      (spaces-convert-form form-a))
     (macroexpand-all form-b)) t))
 
-(defmacro namespace-print (name &rest forms)
+(defmacro spaces-print (name &rest forms)
   "Return the expanded results of (namespace NAME :global :verbose FORMS).
 Ideal for determining why a specific form isn't being parsed
 correctly."
