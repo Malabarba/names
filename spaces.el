@@ -302,11 +302,17 @@ returns nil."
            (and (namespace--keyword :global)
                 (boundp (namespace--prepend sbl))))))
 
+;;; This is calling edebug even on `when' and `unless'
 (defun namespace--args-of-function-or-macro (name args macro)
   "Check whether NAME is a function or a macro, and handle ARGS accordingly."
   (if macro
-      ;; Macros are complicated.
-      (namespace--macro-args-using-edebug (cons name args))
+      (cl-case (get-edebug-spec name)
+        ;; Macros where we evaluate all arguments are like functions.
+        ((t) (namespace--args-of-function-or-macro name args nil))
+        ;; Macros where nothing is evaluated we can just return.
+        (0 (cons name args))
+        ;; Other macros are complicated. Ask edebug for help.
+        (t (namespace--macro-args-using-edebug (cons name args))))
     ;; We just convert the arguments of functions.
     (cons name (mapcar 'namespace-convert-form args))))
 
