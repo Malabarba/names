@@ -68,3 +68,13 @@ To use this in your package:
 3. Pleasantly remove all that redundant repetition from you code!
 
 *** Examples
+
+** Tested On:
+
+*** elnode
+- *Number of tests passed:* Same as before namespacing (62).
+- *Reduction in code size:* Approx. 2000 characters.
+*** s.el
+- *Number of tests passed:* All.
+- *Reduction in code size:* Approx. 1000 characters (8%).
+*** dash.el

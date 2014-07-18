@@ -1,4 +1,10 @@
+* Just do it
+** TODO Namespace symbols in doc strings 
+   Should include =`symbol'=, =\\<symbol>= and =\\{symbol}=.
+** TODO Namespace the [[https://www.gnu.org/software/emacs/manual/html_node/cl/Argument-Lists.html][initform]] of cl arglists
+** DONE Don't call edebug if debug-spec is t or 0.
+   CLOSED: [2014-07-17 Thu 19:14]
 * Not sure how to do:
 ** Special treatment for defstruct.
-Right now it's simply being expanded.
+Right now it's simply being handled as a macro
 * Not sure whether should be done:
