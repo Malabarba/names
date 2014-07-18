@@ -651,26 +651,6 @@ If STAR is non-nil, parse as a `let*'."
             (mapcar 'namespace-convert-form (cdr x))))
     (cddr (cdr form)))))
 
-
-;;; ---------------------------------------------------------------
-;;; Developer Utility Functions
-(defmacro namespace-compare-forms (name form-a form-b)
-  "Test if (namespace NAME FORM-A) is the same as FORM-B."
-  (declare (indent (lambda (&rest x) 0)))
-  (equal
-   (let ((namespace--name name))
-     (namespace-convert-form form-a))
-   (macroexpand-all form-b)))
-
-(defmacro namespace-compare-forms-assert (name form-a form-b)
-  "Assert if (namespace NAME FORM-A) is the same as FORM-B."
-  (declare (indent (lambda (&rest x) 0)))
-  (cl-assert
-   (equal
-    (let ((namespace--name name))
-      (namespace-convert-form form-a))
-    (macroexpand-all form-b)) t))
-
 (provide 'spaces)
 
 ;;; spaces.el ends here
