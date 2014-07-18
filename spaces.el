@@ -558,21 +558,42 @@ Currently, we just return FORM without namespacing anything."
 (defun namespace--convert-lambda (form)
   "Special treatment for `lambda' FORM."
   (let ((namespace--local-vars
-         (append (remove '&rest (remove '&optional (cadr form)))
+         (append (namespace--vars-from-arglist (cadr form))
                  namespace--local-vars))
         (forms (cdr (cdr form))))
     (append
      (list (car form)
            (cadr form))
      (when (stringp (car forms))
-       (let ((out (car forms)))
-         (setq forms (cdr forms))
-         (list out)))
+       (prog1
+           (list (car forms))
+         (setq forms (cdr forms))))
      (when (eq 'interactive (car-safe (car forms)))
-       (let ((out (car forms)))
-         (setq forms (cdr forms))
-         (list (cons (car out) (mapcar 'namespace-convert-form (cdr out))))))
-     (mapcar 'namespace-convert-form forms))))
+       (prog1
+           (list (list (car (car forms))
+                       (namespace-convert-form (cadr (car forms)))))
+         (setq forms (cdr forms))))
+     (progn
+       ;; (message "%S" forms)
+       (mapcar 'namespace-convert-form forms)))))
+
+(defun namespace--vars-from-arglist (args)
+  "Get a list of local variables from a generalized arglist ARGS."
+  (cl-remove-if
+   (lambda (x) (string-match "^&" (symbol-name x)))
+   (mapcar (lambda (x) (or (cdr-safe (car-safe x)) (car-safe x) x))
+           args)))
+
+(defun namespace--convert-defun (form)
+  "Special treatment for `defun' FORM."
+  (let* ((name (cadr form)))
+    (add-to-list 'namespace--fbound name)
+    (cons (car form)
+          (namespace--convert-lambda
+           (cons (namespace--prepend name) (cddr form))))))
+(defalias 'namespace--convert-defun* 'namespace--convert-defun)
+(defalias 'namespace--convert-defsubst 'namespace--convert-defun)
+(defalias 'namespace--convert-defsubst* 'namespace--convert-defun)
 
 (defun namespace--let-var-convert-then-add (sym add)
   "Try to convert SYM if :let-vars is in use.
