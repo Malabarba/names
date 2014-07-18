@@ -330,23 +330,22 @@ it matches (cdr FORM), but that would take a lot of work and
 we'd be reimplementing something that edebug already does
 phenomenally. So we hack into edebug instead."
   (condition-case nil
-   (car
-    (with-temp-buffer
-      (pp form 'insert)
-      (goto-char (point-min))
-      (let ((edebug-all-forms t)
-            (edebug-all-defs t)
-            (namespace--is-inside-macro 0))
-        (noflet ((edebug-form (cursor) (namespace--edebug-form cursor))
-                 (edebug-make-enter-wrapper
-                  (forms)
-                  (setq edebug-def-name
-                        (or edebug-def-name
-                            edebug-old-def-name
-                            (cl-gensym "spaces-edebug-anon")))
-                  ;; (caddr (cadr (car (last (funcall this-fn forms)))))
-                  forms))
-          (edebug-read-top-level-form)))))
+   (with-temp-buffer
+     (pp form 'insert)
+     (goto-char (point-min))
+     (let ((edebug-all-forms t)
+           (edebug-all-defs t)
+           (namespace--is-inside-macro 0))
+       (noflet ((edebug-form (cursor) (namespace--edebug-form cursor))
+                (edebug-make-enter-wrapper
+                 (forms)
+                 (setq edebug-def-name
+                       (or edebug-def-name
+                           edebug-old-def-name
+                           (cl-gensym "spaces-edebug-anon")))
+                 ;; (caddr (cadr (car (last (funcall this-fn forms)))))
+                 (car forms)))
+         (edebug-read-top-level-form))))
    (invalid-read-syntax
     (namespace--warn "Couldn't namespace this macro using its (debug ...) declaration: %s"
                      form)
