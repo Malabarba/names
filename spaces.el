@@ -495,6 +495,8 @@ It will also be used when we implement something similar to
 
 (defalias 'namespace--convert-defconst 'namespace--convert-defvar
   "Special treatment for `defconst' FORM.")
+(defalias 'namespace--convert-defcustom 'namespace--convert-defvar
+  "Special treatment for `defcustom' FORM.")
 
 (defun namespace--convert-defvaralias (form)
   "Special treatment for `defvaralias' FORM."
@@ -507,11 +509,6 @@ It will also be used when we implement something similar to
       (list 'quote (namespace--prepend name))
       (list 'quote (namespace-convert-form name2)))
      (mapcar 'namespace-convert-form (cdr (cdr form))))))
-
-(defun namespace--convert-defcustom (form)
-  "Special treatment for `defcustom' FORM."
-  (namespace--convert-custom-declare-variable
-   (macroexpand form)))
 
 (defun namespace--convert-custom-declare-variable (form)
   "Special treatment for `custom-declare-variable' FORM."
