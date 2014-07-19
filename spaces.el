@@ -641,15 +641,15 @@ If STAR is non-nil, parse as a `let*'."
   "Special treatment for `let' FORM."
   (spaces--convert-let form t))
 
-(defun spaces--convert-cond (form)
-  "Special treatment for `cond' FORM."
-  (cons
-   (car form)
-   (mapcar
-    (lambda (x)
-      (cons (spaces-convert-form (car x))
-            (mapcar 'spaces-convert-form (cdr x))))
-    (cdr form))))
+;; (defun spaces--convert-cond (form)
+;;   "Special treatment for `cond' FORM."
+;;   (cons
+;;    (car form)
+;;    (mapcar
+;;     (lambda (x)
+;;       (cons (spaces-convert-form (car x))
+;;             (mapcar 'spaces-convert-form (cdr x))))
+;;     (cdr form))))
 
 (defun spaces--convert-condition-case (form)
   "Special treatment for `condition-case' FORM."
