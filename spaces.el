@@ -553,10 +553,11 @@ It will also be used when we implement something similar to
        (cons spaced-name (cddr form)))))))
 (defalias 'spaces--convert-defmacro* 'spaces--convert-defmacro)
 
-(defun spaces--convert-defvar (form)
+(defun spaces--convert-defvar (form &optional dont-add)
   "Special treatment for `defvar' FORM."
   (let ((name (cadr form)))
-    (add-to-list 'spaces--bound name)
+    (unless dont-add
+      (add-to-list 'spaces--bound name))
     (append
      (list
       (car form)
@@ -599,8 +600,14 @@ It will also be used when we implement something similar to
       (spaces-convert-form        (car (cdr (cdr (cdr form))))))
      (mapcar 'spaces-convert-form (cdr (cdr (cdr (cdr form))))))))
 
+(defun spaces--convert-defface (form)
+  "Special treatment for `defface' FORM.
+Identical to defvar, just doesn't add the symbol to the boundp
+list."
+  (spaces--convert-defvar form :dont-add))
+
 (defun spaces--convert-quote (form)
-  "Special treatment for `quote/function' FORM.
+  "Special treatment for `quote' FORM.
 When FORM is (quote argument), argument is parsed for namespacing
 only if it is a lambda form.
 
