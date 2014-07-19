@@ -470,19 +470,30 @@ It will also be used when we implement something similar to
 ;;; Defun, defmacro, and defsubst macros are pretty predictable. So we
 ;;; expand them and handle them like defaliases, instead of handling
 ;;; as general macros.
-
 (defun spaces--convert-defmacro (form)
   "Special treatment for `defmacro' FORM."
   (let* ((spaces--name-already-prefixed t)
-         (name (cadr form)))
+         (name (cadr form))
+         (spaced-name (spaces--prepend name)))
     (add-to-list 'spaces--macro name)
     (add-to-list 'spaces--fbound name)
+    ;; Set the macros debug spec if possible. It will be relevant on
+    ;; the next run.
+    (when (setq decl (ignore-errors (cond
+                       ((eq (car-safe (nth 3 form)) 'declare)
+                        (nth 3 form))
+                       ((and (stringp (nth 3 form))
+                             (eq (car-safe (nth 4 form)) 'declare))
+                        (nth 4 form))
+                       (t nil))))
+      (setq decl (car (cdr-safe (assoc 'debug (cdr decl)))))
+      (when decl (put spaced-name 'edebug-form-spec decl)))
+    ;; Then convert the macro as a defalias.
     (spaces-convert-form
      (macroexpand
       (cons
        (car form)
-       (cons (spaces--prepend name)
-             (cddr form)))))))
+       (cons spaced-name (cddr form)))))))
 (defalias 'spaces--convert-defmacro* 'spaces--convert-defmacro)
 
 (defun spaces--convert-defvar (form)
