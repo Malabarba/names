@@ -79,6 +79,9 @@ Don't customise this.
 Instead use the :protection keyword when defining the
 namespace.")
 
+(defvar spaces--current-run nil 
+  "Either 1 or 2, depending on which runthrough we're in.")
+
 (defmacro spaces--prepend (sbl)
   "Return namespace+SBL."
   (declare (debug (symbolp)))
@@ -159,6 +162,7 @@ behaviour:
   (let* ((spaces--name name)
          (spaces--regexp
           (concat "\\`" (regexp-quote (symbol-name name))))
+         (spaces--current-run 0)
          ;; Use the :protection keyword to change this.
          (spaces--protection "\\`::")
          (spaces--bound
@@ -182,6 +186,7 @@ behaviour:
     ;; First have to populate the bound and fbound lists. So we read
     ;; the entire form (without evaluating it).
     (mapc 'spaces-convert-form body)
+    (incf spaces--current-run)
     ;; Then we go back and actually namespace the form, which we
     ;; return so that it can be evaluated.
     (cons 'progn (mapcar 'spaces-convert-form body))))
@@ -195,10 +200,18 @@ See macro `namespace' for more information."
   (cond
    ((null form) form)
    ;; Function calls
-   ((listp form)
+   ((consp form)
     (let ((kar (car form))
           func)
       (cond
+       ;; If kar is a list, either 1) it's a lambda form, 2) it's a
+       ;; macro we don't know about yet, 3) we have a bug.
+       ((consp kar)
+        (if (and (null (functionp kar))
+                 (> spaces--current-run 1))
+            (spaces--warn "Ran into the following strange form.
+Either it's an undefined macro, a macro with a bad debug declaration, or we have a bug.\n%s" form)
+          (mapcar 'spaces-convert-form form)))
        ;; Namespaced Functions/Macros
        ((spaces--fboundp kar)
         (spaces--message "Namespaced: %s" kar)
@@ -250,7 +263,7 @@ See macro `namespace' for more information."
        (error "[spaces] Global value of variable %s should be nil! %s"
               x "Set it using keywords instead")))
    '(spaces--name spaces--regexp spaces--bound
-                  spaces--macro
+                  spaces--macro spaces--current-run
                   spaces--fbound spaces--keywords
                   spaces--local-vars spaces--protection)))
 
