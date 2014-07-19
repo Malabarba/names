@@ -84,6 +84,14 @@ namespace.")
   (declare (debug (symbolp)))
   `(intern (format "%s%s" spaces--name ,sbl)))
 
+
+(defmacro spaces--filter-if-bound (var &optional pred)
+  "If VAR is bound and is a list, take the car of its elements which satify PRED."
+  (declare (debug (symbolp function-form)))
+  (when (boundp var)
+    `(cl-remove-if
+      ,pred (mapcar (lambda (x) (or (car-safe x) x)) ,var))))
+
 
 ;;; ---------------------------------------------------------------
 ;;; The Main Macro and Main Function.
@@ -178,14 +186,6 @@ behaviour:
     ;; return so that it can be evaluated.
     (cons 'progn (mapcar 'spaces-convert-form body))))
 
-(defmacro spaces--filter-if-bound (var &optional pred)
-  "If VAR is bound and is a list, take the car of its elements which satify PRED."
-  (declare (debug (symbolp function-form)))
-  (when (boundp var)
-    `(cl-remove-if
-      ,pred (mapcar (lambda (x) (or (car-safe x) x)) ,var))))
-
-;;;###autoload
 (defun spaces-convert-form (form)
   "Do namespace conversion on FORM.
 FORM is any legal elisp form.
