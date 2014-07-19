@@ -42,13 +42,15 @@
 ;; 0.1a - 2014/07/18 - Created File.
 ;;; Code:
 
+(require 'spaces)
 
 
 ;;; ---------------------------------------------------------------
 ;;; Developer Utility Functions
-(defmacro spaces-compare-forms (name form-a form-b)
+(defmacro space-compare-forms (name form-a form-b)
   "Test if (namespace NAME FORM-A) is the same as FORM-B."
-  (declare (indent (lambda (&rest x) 0)))
+  (declare (indent (lambda (&rest x) 0))
+           (debug (symbolp sexp form)))
   (equal
    (let ((spaces--name name))
      (spaces-convert-form form-a))
@@ -56,7 +58,8 @@
 
 (defmacro spaces-compare-forms-assert (name form-a form-b)
   "Assert if (namespace NAME FORM-A) is the same as FORM-B."
-  (declare (indent (lambda (&rest x) 0)))
+  (declare (indent (lambda (&rest x) 0))
+           (debug (symbolp sexp form)))
   (cl-assert
    (equal
     (let ((spaces--name name))
@@ -67,10 +70,10 @@
   "Return the expanded results of (namespace NAME :global :verbose FORMS).
 Ideal for determining why a specific form isn't being parsed
 correctly."
-  (declare (indent (lambda (&rest x) 0)) (debug (sexp body)))
+  (declare (indent (lambda (&rest x) 0)) (debug 0))
   `(let ((eval-expression-print-level (max eval-expression-print-level 300))
          (eval-expression-print-length (max eval-expression-print-length 300)))
-     (macroexpand '(namespace ,name :global :verbose ,@forms))))
+     (macroexpand '(defspace ,name :global :verbose ,@forms))))
 
 (provide 'spaces-dev)
 ;;; spaces-dev.el ends here.
