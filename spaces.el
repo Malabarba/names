@@ -44,10 +44,28 @@
 ;; 0.1a - 2014/05/20 - Created File.
 ;;; Code:
 
-(require 'noflet)
-(require 'edebug)
 (require 'cl-lib)
-;; (require 'dash)
+
+;;; Support
+(unless (fboundp 'function-get)
+  (defun function-get (f prop &optional autoload)
+    "Return the value of property PROP of function F.
+If AUTOLOAD is non-nil and F is autoloaded, try to autoload it
+in the hope that it will set PROP.  If AUTOLOAD is `macro', only do it
+if it's an autoloaded macro."
+    (let ((val nil))
+      (while (and (symbolp f)
+                  (null (setq val (get f prop)))
+                  (fboundp f))
+        (let ((fundef (symbol-function f)))
+          (if (and autoload (autoloadp fundef)
+                   (not (equal fundef
+                               (autoload-do-load fundef f
+                                                 (if (eq autoload 'macro)
+                                                     'macro)))))
+              nil                         ;Re-try `get' on the same `f'.
+            (setq f fundef))))
+      val)))
 
 
 ;;; ---------------------------------------------------------------
@@ -322,7 +340,7 @@ returns nil."
 (defun spaces--args-of-function-or-macro (name args macro)
   "Check whether NAME is a function or a macro, and handle ARGS accordingly."
   (if macro
-      (cl-case (get-edebug-spec name)
+      (cl-case (spaces--get-edebug-spec name)
         ;; Macros where we evaluate all arguments are like functions.
         ((t) (spaces--args-of-function-or-macro name args nil))
         ;; Macros where nothing is evaluated we can just return.
@@ -331,6 +349,19 @@ returns nil."
         (t (spaces--macro-args-using-edebug (cons name args))))
     ;; We just convert the arguments of functions.
     (cons name (mapcar 'spaces-convert-form args))))
+
+(defun spaces--get-edebug-spec (name)
+  "Get 'edebug-form-spec property of symbol NAME."
+  ;; Get the spec of symbol resolving all indirection.
+  (let ((spec nil)
+        (indirect symbol))
+    (while (progn
+             (and (symbolp indirect)
+                  (setq indirect
+                        (function-get indirect 'edebug-form-spec 'macro))))
+      ;; (edebug-trace "indirection: %s" edebug-form-spec)
+      (setq spec indirect))
+    spec))
 
 (defvar spaces--is-inside-macro nil 
   "Auxiliary var used in `spaces--macro-args-using-edebug'.")
@@ -345,6 +376,8 @@ Ideally, we would read this specification ourselves and see how
 it matches (cdr FORM), but that would take a lot of work and
 we'd be reimplementing something that edebug already does
 phenomenally. So we hack into edebug instead."
+  (require 'edebug)
+  (require 'noflet)
   (condition-case nil
       (with-temp-buffer
         (pp form 'insert)
