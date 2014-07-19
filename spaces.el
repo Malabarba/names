@@ -6,7 +6,7 @@
 ;; URL: http://github.com/Bruce-Connor/spaces
 ;; Version: 0.5
 ;; Keywords:
-;; Prefix: namespace
+;; Prefix: spaces
 ;; Separator: -
 
 ;;; Commentary:
