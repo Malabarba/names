@@ -41,7 +41,7 @@ developer) a convenient way of writing code that adheres to this
 standard.
 
 #+begin_src emacs-lisp
-(namespace package-
+(defspace package-
 ;; The rest of the package code goes in here as well.
 
 (defun initialize (&optional no-activate)
@@ -65,7 +65,7 @@ standard.
 To use this in your package:
 
 1. Remember to list =spaces= as a dependency.
-2. Wrap all code that's to be namespaced inside a =(namespace NAME ...)= macro.
+2. Wrap all code that's to be namespaced inside a =(defspace NAME ...)= macro.
 3. Pleasantly remove all that redundant repetition from you code!
 
 *** Examples
