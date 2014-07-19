@@ -5,6 +5,7 @@
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/spaces
 ;; Version: 0.5
+;; Package-Requires: ((emacs "24.1") (cl-lib "1.0") (noflet "0.0.11"))
 ;; Keywords:
 ;; Prefix: spaces
 ;; Separator: -
