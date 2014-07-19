@@ -1,4 +1,5 @@
-* Spaces - A Namespace implementation for Emacs-Lisp
+* Spaces
+** A Namespace implementation for Emacs-Lisp
 
 This package aims to provide a complete and robust implementation of
 (C++-like) namespaces in Emacs.
@@ -17,7 +18,7 @@ how C++ handles namespaces. This successfully avoids name clashes
 between packages, but it quickly leads to code that's repetitive and
 annoying to write.
 
-Here's an example from =package.el=, the word /"package"/ is repeated
+Here's an example from =package.el=, the word "package" is repeated
 7 times in a 10-line function definition.
 
 #+begin_src emacs-lisp
