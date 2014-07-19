@@ -88,7 +88,7 @@ namespace.")
 ;;; ---------------------------------------------------------------
 ;;; The Main Macro and Main Function.
 ;;;###autoload
-(defmacro namespace (name &rest body)
+(defmacro defspace (name &rest body)
   "Inside the namespace NAME, execute BODY.
 NAME can be any symbol (not quoted), but it's highly recommended
 to use some form of separator (such as on of : / -).
@@ -145,11 +145,13 @@ behaviour:
       (let ((foo-bar foo-mo)) ...)
 
 \(fn NAME [KEYWORDS] BODY)"
-  (declare (indent (lambda (&rest x) 0)))
+  (declare (indent (lambda (&rest x) 0))
+           (debug (&define name body)))
   (spaces--error-if-using-vars)
   (let* ((spaces--name name)
          (spaces--regexp
           (concat "\\`" (regexp-quote (symbol-name name))))
+         ;; Use the :protection keyword to change this.
          (spaces--protection "\\`::")
          (spaces--bound
           (spaces--remove-namespace-from-list
