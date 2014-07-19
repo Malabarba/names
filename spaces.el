@@ -620,7 +620,15 @@ whether the form was a quote."
   (let ((kadr (cadr form)))
     (if (eq (car-safe kadr) 'lambda)
         (list (car form) (spaces-convert-form kadr))
-      form)))
+      ;; A symbol inside a function quote should be a function.
+      (if (and (symbolp kadr)
+               (eq (car form) 'function))
+          (if (setq func (spaces--remove-protection kadr))
+              (list (car form) func)
+            (if (spaces--fboundp kadr)
+                (list (car form) (spaces--prepend kadr))
+              form))
+        form))))
 
 (defalias 'spaces--convert-function 'spaces--convert-quote)
 
