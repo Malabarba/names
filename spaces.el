@@ -190,6 +190,7 @@ behaviour:
     ;; Then we go back and actually namespace the form, which we
     ;; return so that it can be evaluated.
     (cons 'progn (mapcar 'spaces-convert-form body))))
+(defalias 'namespace 'defspace)
 
 (defun spaces-convert-form (form)
   "Do namespace conversion on FORM.
