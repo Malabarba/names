@@ -224,6 +224,12 @@ See macro `namespace' for more information."
     (let ((kar (car form))
           func)
       (cond
+       ;; If symbol is protected, clean it.
+       ((setq func (spaces--remove-protection kar))
+        (spaces--message "Protected: %s" kar)
+        ;; And decide what to do with it.
+        (spaces--handle-args func (cdr form)))
+       
        ;; If kar is a list, either 1) it's a lambda form, 2) it's a
        ;; macro we don't know about yet, 3) we have a bug.
        ((consp kar)
@@ -232,23 +238,15 @@ See macro `namespace' for more information."
             (spaces--warn "Ran into the following strange form.
 Either it's an undefined macro, a macro with a bad debug declaration, or we have a bug.\n%s" form)
           (mapcar 'spaces-convert-form form)))
+       
        ;; Namespaced Functions/Macros
        ((spaces--fboundp kar)
         (spaces--message "Namespaced: %s" kar)
         (spaces--args-of-function-or-macro
          (spaces--prepend kar) (cdr form) (spaces--macrop kar)))
-       ;; Function-like forms that get special handling
-       ;; That's anything with a spaces--convert-%s function defined.
-       ((fboundp (setq func (intern (format "spaces--convert-%s" kar))))
-        (spaces--message "Special handling: %s" func)
-        (funcall func form))
-       ;; General functions/macros
-       (t
-        (spaces--message "Regular handling: %s" kar)
-        ;; If symbol is protected, clean it; otherwise, use it as-is.
-        (let ((clean-kar (or (spaces--remove-protection kar) kar)))
-          (spaces--args-of-function-or-macro
-           clean-kar (cdr form) (macrop clean-kar)))))))
+       
+       ;; General functions/macros/special-forms
+       (t (spaces--handle-args kar (cdr form))))))
    ;; Variables
    ((symbolp form)
     (spaces--message "Symbol handling: %s" form)
@@ -260,6 +258,17 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
           form)))
    ;; Values
    (t form)))
+
+(defun spaces--handle-args (func args)
+  "Generic handling for the form (FUNC . ARGS), without namespacing FUNC."
+  (let ((handler (intern (format "spaces--convert-%s" func))))
+    ;; Some function-like forms get special handling.
+    ;; That's anything with a spaces--convert-%s function defined.
+    (if (fboundp handler)
+        (progn (spaces--message "Special handling: %s" handler)
+               (funcall handler (cons func args)))
+      ;; If it isn't special, it's either a function or a macro.
+      (spaces--args-of-function-or-macro func args (macrop func)))))
 
 (defun spaces--message (f &rest rest)
   "If :verbose is on, pass F and REST to `message'."
