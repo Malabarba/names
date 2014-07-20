@@ -542,7 +542,8 @@ It will also be used when we implement something similar to
   "Special treatment for `defmacro' FORM."
   (let* ((spaces--name-already-prefixed t)
          (name (cadr form))
-         (spaced-name (spaces--prepend name)))
+         (spaced-name (spaces--prepend name))
+         decl)
     (add-to-list 'spaces--macro name)
     (add-to-list 'spaces--fbound name)
     ;; Set the macros debug spec if possible. It will be relevant on
@@ -628,7 +629,8 @@ be logically namespaced and will be preserved as-is.
 Note, however, that the value of the NAME argument of a
 \"definition-type\" forms is ALWAYS namespaced, regardless of
 whether the form was a quote."
-  (let ((kadr (cadr form)))
+  (let ((kadr (cadr form))
+        func)
     (if (eq (car-safe kadr) 'lambda)
         (list (car form) (spaces-convert-form kadr))
       ;; A symbol inside a function quote should be a function.
