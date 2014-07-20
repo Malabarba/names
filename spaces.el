@@ -618,6 +618,21 @@ Identical to defvar, just doesn't add the symbol to the boundp
 list."
   (spaces--convert-defvar form :dont-add))
 
+(defun spaces--convert-define-derived-mode (form)
+  "Special treatment for `define-derived-mode' FORM.
+Identical to defvar, just doesn't add the symbol to the boundp
+list."
+  (spaces--macro-args-using-edebug
+   (let ((name (cadr form)))
+     (add-to-list 'spaces--fbound name)
+     (add-to-list 'spaces--bound name)
+     (add-to-list 'spaces--bound
+                  (intern (format "%s-map" name)))
+     (cons
+      (car form)
+      (cons (spaces--prepend name)
+            (cddr form))))))
+
 (defun spaces--convert-quote (form)
   "Special treatment for `quote' FORM.
 When FORM is (quote argument), argument is parsed for namespacing
