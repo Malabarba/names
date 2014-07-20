@@ -105,6 +105,13 @@ namespace.")
 (defvar spaces--current-run nil 
   "Either 1 or 2, depending on which runthrough we're in.")
 
+(defvar spaces--var-list
+  '(spaces--name spaces--regexp spaces--bound
+                 spaces--macro spaces--current-run
+                 spaces--fbound spaces--keywords
+                 spaces--local-vars spaces--protection) 
+  "List of variables the user shouldn't touch.")
+
 (defmacro spaces--prepend (sbl)
   "Return namespace+SBL."
   (declare (debug (symbolp)))
@@ -182,37 +189,40 @@ behaviour:
   (declare (indent (lambda (&rest x) 0))
            (debug (&define name body)))
   (spaces--error-if-using-vars)
-  (let* ((spaces--name name)
-         (spaces--regexp
-          (concat "\\`" (regexp-quote (symbol-name name))))
-         (spaces--current-run 0)
-         ;; Use the :protection keyword to change this.
-         (spaces--protection "\\`::")
-         (spaces--bound
-          (spaces--remove-namespace-from-list
-           (spaces--filter-if-bound byte-compile-bound-variables)
-           (spaces--filter-if-bound byte-compile-constants)
-           (spaces--filter-if-bound byte-compile-variables)))
-         (spaces--fbound
-          (spaces--remove-namespace-from-list
-           (spaces--filter-if-bound byte-compile-macro-environment 'macrop)
-           (spaces--filter-if-bound byte-compile-function-environment 'macrop)))
-         (spaces--macro
-          (spaces--remove-namespace-from-list
-           (spaces--filter-if-bound byte-compile-macro-environment (lambda (x) (not (macrop x))))
-           (spaces--filter-if-bound byte-compile-function-environment (lambda (x) (not (macrop x))))))
-         spaces--keywords spaces--local-vars)
-    ;; Read keywords
-    (while (keywordp (car-safe body))
-      (push (spaces--handle-keyword body) spaces--keywords)
-      (setq body (cdr body)))
-    ;; First have to populate the bound and fbound lists. So we read
-    ;; the entire form (without evaluating it).
-    (mapc 'spaces-convert-form body)
-    (incf spaces--current-run)
-    ;; Then we go back and actually namespace the form, which we
-    ;; return so that it can be evaluated.
-    (cons 'progn (mapcar 'spaces-convert-form body))))
+  (unwind-protect
+   (let* ((spaces--name name)
+          (spaces--regexp
+           (concat "\\`" (regexp-quote (symbol-name name))))
+          (spaces--current-run 0)
+          ;; Use the :protection keyword to change this.
+          (spaces--protection "\\`::")
+          (spaces--bound
+           (spaces--remove-namespace-from-list
+            (spaces--filter-if-bound byte-compile-bound-variables)
+            (spaces--filter-if-bound byte-compile-constants)
+            (spaces--filter-if-bound byte-compile-variables)))
+          (spaces--fbound
+           (spaces--remove-namespace-from-list
+            (spaces--filter-if-bound byte-compile-macro-environment 'macrop)
+            (spaces--filter-if-bound byte-compile-function-environment 'macrop)))
+          (spaces--macro
+           (spaces--remove-namespace-from-list
+            (spaces--filter-if-bound byte-compile-macro-environment (lambda (x) (not (macrop x))))
+            (spaces--filter-if-bound byte-compile-function-environment (lambda (x) (not (macrop x))))))
+          spaces--keywords spaces--local-vars)
+     ;; Read keywords
+     (while (keywordp (car-safe body))
+       (push (spaces--handle-keyword body) spaces--keywords)
+       (setq body (cdr body)))
+     ;; First have to populate the bound and fbound lists. So we read
+     ;; the entire form (without evaluating it).
+     (mapc 'spaces-convert-form body)
+     (incf spaces--current-run)
+     ;; Then we go back and actually namespace the form, which we
+     ;; return so that it can be evaluated.
+     (cons 'progn (mapcar 'spaces-convert-form body)))
+   (mapc (lambda (x) (set x nil)) spaces--var-list)))
+
 (defalias 'namespace 'defspace)
 
 (defun spaces-convert-form (form)
@@ -295,10 +305,7 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
      (when (eval x)
        (error "[spaces] Global value of variable %s should be nil! %s"
               x "Set it using keywords instead")))
-   '(spaces--name spaces--regexp spaces--bound
-                  spaces--macro spaces--current-run
-                  spaces--fbound spaces--keywords
-                  spaces--local-vars spaces--protection)))
+   spaces--var-list))
 
 (defun spaces--remove-namespace-from-list (&rest lists)
   "Return a concatenated un-namespaced version of LISTS.
