@@ -47,6 +47,10 @@
 
 (require 'cl-lib)
 
+(eval-when-compile
+  '(require 'noflet))
+(eval-when-compile
+  '(require 'edebug))
 ;;; Support
 (unless (fboundp 'function-get)
   (defun function-get (f prop &optional autoload)
