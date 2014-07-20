@@ -375,7 +375,7 @@ returns nil."
   "Get 'edebug-form-spec property of symbol NAME."
   ;; Get the spec of symbol resolving all indirection.
   (let ((spec nil)
-        (indirect symbol))
+        (indirect name))
     (while (progn
              (and (symbolp indirect)
                   (setq indirect
