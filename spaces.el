@@ -165,28 +165,21 @@ expand instead to
 
 ===============================
 
-Immediately after NAME you may add keywords which customize this
-behaviour:
+AUTOLOAD
 
-1. :let-vars
+In order for `defspace' to work with ;;;###autoload comments just
+replace all instances of ;;;###autoload inside your `defspace'
+with :autoload, and then add an ;;;###autoload tag just above
+your `defspace'.
 
-   If this is present, variables defined in let forms become
-   namespaced (just like defvars). If this is absent, they are
-   preserved.
+===============================
 
-   For example, assuming `foo:mo' has a variable definition, the
-   code
-      (namespace foo-
-      (let ((bar mo)) ...)
-      )
-   expands to
-      (let ((bar foo-mo)) ...)
-   while
-      (namespace foo- :let-vars
-      (let ((bar mo)) ...)
-      )
-   expands to
-      (let ((foo-bar foo-mo)) ...)
+KEYWORDS
+
+Immediately after NAME you may add keywords which customize the
+behaviour of `defspace'. For a description of these keywords, see
+the manual on
+http://github.com/Bruce-Connor/spaces
 
 \(fn NAME [KEYWORDS] BODY)"
   (declare (indent (lambda (&rest x) 0))

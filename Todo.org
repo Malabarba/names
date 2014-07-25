@@ -32,4 +32,5 @@ Right now it's simply being handled as a macro
 ** TODO Namespace the [[https://www.gnu.org/software/emacs/manual/html_node/cl/Argument-Lists.html][initform]] of cl arglists.
 ** DONE Don't call edebug if debug-spec is t or 0.
    CLOSED: [2014-07-17 Thu 19:14]
+** TODO Describe keywords in an info manual, and refer to it instead of the website. 
 * Not sure whether should be done:

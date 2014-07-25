@@ -70,6 +70,35 @@ To use this in your package:
 
 *** Examples
 
+** Keywords - Customizing the behaviour
+Immediately after the name of your space you may add keywords which
+customize the behaviour of =defspace=.
+
+*** =:let-vars= 
+If this is present, variables defined in let forms become namespaced
+(just like defvars). If this is absent, they are preserved.
+
+For example, assuming `foo-mo' has a variable definition, the code
+#+begin_src emacs-lisp
+(namespace foo-
+(let ((bar mo)) ...)
+)
+#+end_src
+expands to
+#+begin_src emacs-lisp
+(let ((bar foo-mo)) ...)
+#+end_src
+while
+#+begin_src emacs-lisp
+(namespace foo- :let-vars
+(let ((bar mo)) ...)
+)
+#+end_src
+expands to
+#+begin_src emacs-lisp
+(let ((foo-bar foo-mo)) ...)
+#+end_src
+
 ** Tested On:
 
 *** elnode
