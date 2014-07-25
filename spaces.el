@@ -112,6 +112,9 @@ namespace.")
                  spaces--local-vars spaces--protection) 
   "List of variables the user shouldn't touch.")
 
+(defvar spaces--inside-make-autoload nil 
+  "Used in `make-autolaod' to indicate to `defspace' that we're generating autoloads.")
+
 (defmacro spaces--prepend (sbl)
   "Return namespace+SBL."
   (declare (debug (symbolp)))
@@ -190,38 +193,64 @@ behaviour:
            (debug (&define name body)))
   (spaces--error-if-using-vars)
   (unwind-protect
-   (let* ((spaces--name name)
-          (spaces--regexp
-           (concat "\\`" (regexp-quote (symbol-name name))))
-          (spaces--current-run 0)
-          ;; Use the :protection keyword to change this.
-          (spaces--protection "\\`::")
-          (spaces--bound
-           (spaces--remove-namespace-from-list
-            (spaces--filter-if-bound byte-compile-bound-variables)
-            (spaces--filter-if-bound byte-compile-constants)
-            (spaces--filter-if-bound byte-compile-variables)))
-          (spaces--fbound
-           (spaces--remove-namespace-from-list
-            (spaces--filter-if-bound byte-compile-macro-environment 'macrop)
-            (spaces--filter-if-bound byte-compile-function-environment 'macrop)))
-          (spaces--macro
-           (spaces--remove-namespace-from-list
-            (spaces--filter-if-bound byte-compile-macro-environment (lambda (x) (not (macrop x))))
-            (spaces--filter-if-bound byte-compile-function-environment (lambda (x) (not (macrop x))))))
-          spaces--keywords spaces--local-vars)
-     ;; Read keywords
-     (while (keywordp (car-safe body))
-       (push (spaces--handle-keyword body) spaces--keywords)
-       (setq body (cdr body)))
-     ;; First have to populate the bound and fbound lists. So we read
-     ;; the entire form (without evaluating it).
-     (mapc 'spaces-convert-form body)
-     (incf spaces--current-run)
-     ;; Then we go back and actually namespace the form, which we
-     ;; return so that it can be evaluated.
-     (cons 'progn (mapcar 'spaces-convert-form body)))
-   (mapc (lambda (x) (set x nil)) spaces--var-list)))
+      (let* ((spaces--name name)
+             (spaces--regexp
+              (concat "\\`" (regexp-quote (symbol-name name))))
+             (spaces--current-run 0)
+             ;; Use the :protection keyword to change this.
+             (spaces--protection "\\`::")
+             (spaces--bound
+              (spaces--remove-namespace-from-list
+               (spaces--filter-if-bound byte-compile-bound-variables)
+               (spaces--filter-if-bound byte-compile-constants)
+               (spaces--filter-if-bound byte-compile-variables)))
+             (spaces--fbound
+              (spaces--remove-namespace-from-list
+               (spaces--filter-if-bound byte-compile-macro-environment 'macrop)
+               (spaces--filter-if-bound byte-compile-function-environment 'macrop)))
+             (spaces--macro
+              (spaces--remove-namespace-from-list
+               (spaces--filter-if-bound byte-compile-macro-environment (lambda (x) (not (macrop x))))
+               (spaces--filter-if-bound byte-compile-function-environment (lambda (x) (not (macrop x))))))
+             spaces--keywords spaces--local-vars)
+        ;; Read keywords
+        (while (and (keywordp (car-safe body))
+                    ;; :autoload is part of body and is handled below.
+                    (null (eq (car-safe body) :autoload)))
+          (push (spaces--handle-keyword body) spaces--keywords)
+          (setq body (cdr body)))
+        ;; First have to populate the bound and fbound lists. So we read
+        ;; the entire form (without evaluating it).
+        (mapc 'spaces-convert-form body)
+        (incf spaces--current-run)
+        ;; Then we go back and actually namespace the entire form, which
+        ;; we return so that it can be evaluated.
+        (cons 'progn (mapcar 'spaces-convert-form
+                             ;; Unless we're in `make-autoload', then just return autoloads.
+                             (if spaces--inside-make-autoload
+                                 (spaces--extract-autoloads body)
+                               body))))
+    (mapc (lambda (x) (set x nil)) spaces--var-list)))
+
+(defun spaces--extract-autoloads (body)
+  "Return a list of the forms in BODY preceded by :autoload."
+  (let (acons)
+    (when (setq acons (memq :autoload body))
+      (cons
+       (cadr acons)
+       (spaces--extract-autoloads (cdr (cdr acons)))))))
+
+;;;###autoload
+(defadvice make-autoload (before spaces-before-make-autoload-advice
+                                 (form file &optional expansion) activate)
+  "Make sure `make-autoload' understands defspace.
+Use a letbind to indicate to `defspace' that we're generating autoloads."
+  (let ((spaces--inside-make-autoload t)
+        space)
+    (when (eq (car-safe form) 'defspace)
+      (setq space (macroexpand form))
+      (ad-set-arg 0 space)
+      (ad-set-arg 2 'expansion))))
 
 (defalias 'namespace 'defspace)
 
