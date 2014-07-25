@@ -252,8 +252,6 @@ Use a letbind to indicate to `defspace' that we're generating autoloads."
       (ad-set-arg 0 space)
       (ad-set-arg 2 'expansion))))
 
-(defalias 'namespace 'defspace)
-
 (defun spaces-convert-form (form)
   "Do namespace conversion on FORM.
 FORM is any legal elisp form.
