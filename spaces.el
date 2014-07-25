@@ -135,7 +135,7 @@ namespace.")
 (defmacro defspace (name &rest body)
   "Inside the namespace NAME, execute BODY.
 NAME can be any symbol (not quoted), but it's highly recommended
-to use some form of separator (such as on of : / -).
+to use some form of separator (such as :, /, or -).
 
 This has two main effects:
 
