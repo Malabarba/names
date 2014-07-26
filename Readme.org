@@ -1,6 +1,8 @@
 #+OPTIONS: toc:nil num:nil
 
 * Spaces
+[[file:package-example.png]]
+/Example usage of Spaces to namespace an emacs-lisp function./
 *** A Namespace implementation for Emacs-Lisp
 
 The *Spaces* package aims to provide an implementation of
