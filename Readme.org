@@ -1,7 +1,6 @@
-#+OPTIONS: toc:2 num:nil
+#+OPTIONS: toc:nil num:nil
 
-** Spaces
-#+TOC: headlines 2        (insert TOC here, with two headline levels)
+* Spaces
 *** A Namespace implementation for Emacs-Lisp
 
 The *Spaces* package aims to provide an implementation of
