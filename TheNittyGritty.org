@@ -73,6 +73,48 @@ expands to
 (mapcar #'foo-fun somelist)
 #+end_src
 
+** Local Variables Take Precedence
+Local variables take precedence over namespace variables.
+For instance
+#+begin_src emacs-lisp
+(defspace foo-
+(defvar bar "2")
+
+(let ((bar "1"))
+  (string-to-int bar))
+)
+#+end_src
+expands to 
+#+begin_src emacs-lisp
+(defvar foo-bar "2")
+
+(let ((bar "1"))
+  (string-to-int bar))
+#+end_src
+
+Note how the last =bar= isn't namespaced. That's because the let-bind
+is a local definition, and takes precedence over the global =foo-bar=.
+The argument list of functions, macros, and lambdas are also local
+definitions.
+
+You can customize this behaviour (for the =let= case, not for argument
+lists) with the =:let-vars= keyword. Then:
+#+begin_src emacs-lisp
+(defspace foo- :let-vars
+(defvar bar "2")
+
+(let ((bar "1"))
+  (string-to-int bar))
+)
+#+end_src
+will expand to 
+#+begin_src emacs-lisp
+(defvar foo-bar "2")
+
+(let ((foo-bar "1"))
+  (string-to-int foo-bar))
+#+end_src
+
 ** Macros
 Macros are handled in a very intelligent manner. 
 

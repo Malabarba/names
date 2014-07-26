@@ -100,7 +100,7 @@ name, not when it's used as a variable, because =defspace= knowns that
 **** Case-by-case Examples
 In general, =defspace= should work as you expect it to. But if you
 need to understand why something is or isn't being namespaced, have a
-look at [[file:TheNittyGritty.org][TheNittyGritty.org]]
+look at [[https://github.com/Bruce-Connor/emacs-lisp-namespaces/blob/master/TheNittyGritty.org][TheNittyGritty.org]]
 
 *** Keywords - Customizing the behaviour
 Immediately after the name of your space you may add keywords which
