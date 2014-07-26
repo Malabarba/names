@@ -9,17 +9,10 @@
 
 ;;; Commentary:
 ;;
-;; 
-
-;;; Instructions:
-;;
-;; INSTALLATION
-;;
-;; This package is available fom Melpa, you may install it by calling
-;; M-x package-install.
-;;
-;; Alternatively, you can download it manually, place it in your
-;; `load-path' and require it with
+;; This package has some convenient functions for developers working
+;; with spaces.el.
+;; This package is installed along with spaces.el, but to use its
+;; features you must require it explicitly:
 ;;
 ;;     (require 'spaces-dev)
 
@@ -74,6 +67,17 @@ correctly."
   `(let ((eval-expression-print-level (max eval-expression-print-level 300))
          (eval-expression-print-length (max eval-expression-print-length 300)))
      (macroexpand '(defspace ,name :global :verbose ,@forms))))
+
+(defvar spaces-font-lock
+  '(("^:autoload\\_>" 0 'font-lock-warning-face prepend)
+    ("(\\(\\_<defspace\\_>\\)[\t \n]+\\([^\t \n]+\\)"
+     (1 'font-lock-keyword-face)
+     (2 'font-lock-variable-name-face))))
+
+(setq lisp-el-font-lock-keywords-2
+      (append
+       spaces-font-lock
+       lisp-el-font-lock-keywords-2))
 
 (provide 'spaces-dev)
 ;;; spaces-dev.el ends here.
