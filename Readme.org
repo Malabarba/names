@@ -1,6 +1,7 @@
 #+OPTIONS: toc:2 num:nil
 
 ** Spaces
+#+TOC: headlines 2        (insert TOC here, with two headline levels)
 *** A Namespace implementation for Emacs-Lisp
 
 The *Spaces* package aims to provide an implementation of
@@ -24,14 +25,82 @@ To use this in your package:
 1. Remember to list =spaces= as a dependency.
 2. Wrap all code that's to be namespaced inside a =(defspace NAME ...)= macro.
 3. Pleasantly remove all that redundant repetition from you code!
-4. If you have =;;;###autoload= comments inside your =defspace=,
-   replace them with =:autoload= and add an =;;;###autoload= tag immediately
-   above your =defspace=.
+4. When quoting function names, use #' instead of '.
+5. If you have =;;;###autoload= comments inside your =defspace=:
+   1. Replace them with =:autoload= keywords
+   2. Add an =;;;###autoload= tag immediately above your =defspace=.
 
-This last step will make sure =defspace= returns only the autoloaded
-forms when it's expanded by the =make-autoloads= function.
+What you need to know is: when you write 
+#+begin_src emacs-lisp
+(defspace NAME 
+BODY
+)
+#+end_src
+the following two rules will be applied
+**** Every definition gets namespaced
+Any definitions inside =BODY= will have =NAME= prepended to the
+symbol given:
+#+begin_src emacs-lisp
+;;;###autoload
+(defspace foo-
 
-**** Examples
+(defvar bar 1 \"docs\")
+
+:autoload
+(defun free ()
+  "DOC"
+  (message "hi"))
+
+(defalias 'bird 'free)
+)
+#+end_src
+expands to
+#+begin_src emacs-lisp
+(defvar foo-bar 1 \"docs\")
+
+;;;###autoload
+(defun foo-free ()
+  "DOC"
+  (message "hi"))
+
+(defalias 'foo-bird 'foo-free)
+#+end_src
+
+**** Function calls and variable references are treated intelligently
+Any function calls (or variable names) get NAME prepended to them if
+the symbol in question has a function bind (or a variable bind,
+respectively) in the namespace. That is:
+#+begin_src emacs-lisp
+(defspace foo-
+
+(defvar var nil)
+
+(defun infinite (x)
+  (infinite x))
+
+(infinite var)
+(infinite infinite)
+)
+#+end_src
+expands to
+#+begin_src emacs-lisp
+(defvar foo-myvar nil)
+
+(defun foo-infinite (x)
+  (foo-infinite x))
+
+(foo-infinite foo-var)
+(foo-infinite infinite)
+#+end_src
+
+Note how the =infinite= symbol gets namespaced only as a function
+name, not when it's used as a variable, because =defspace= knowns that
+=foo-infinite= is not a variable.
+
+**** Case-by-case Examples
+In general, =defspace= should work as you expect it to. But if you
+need to understand why something is or isn't being namespaced, have a
+look at [[file:TheNittyGritty.org][TheNittyGritty.org]]
 
 *** Keywords - Customizing the behaviour
 Immediately after the name of your space you may add keywords which
@@ -43,7 +112,7 @@ If this is present, variables defined in let forms become namespaced
 
 For example, assuming `foo-mo' has a variable definition, the code
 #+begin_src emacs-lisp
-(namespace foo-
+(defspace foo-
 (let ((bar mo)) ...)
 )
 #+end_src
@@ -53,7 +122,7 @@ expands to
 #+end_src
 while
 #+begin_src emacs-lisp
-(namespace foo- :let-vars
+(defspace foo- :let-vars
 (let ((bar mo)) ...)
 )
 #+end_src
