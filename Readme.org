@@ -15,11 +15,11 @@ namespaces in Emacs with two guiding principles:
             limitations. Yes, as complete as we aim to be,
             there will be limitations.
 
-See [[*Why%20a%20namespace%20package?][Why a namespace package?]] for a description on why this is
+See [[https://github.com/Bruce-Connor/spaces#why-a-namespace-package][Why a namespace package?]] for a description on why this is
 necessary, and see [[https://github.com/Bruce-Connor/emacs-lisp-namespaces/blob/master/Other-Packages.org][Other-Packages.org]] for a description and comparison
 of previous packages attempting similar things.
 
-*** Usage
+** Usage
 
 To use this in your package:
 
@@ -38,7 +38,7 @@ BODY
 )
 #+end_src
 the following two rules will be applied
-**** Every definition gets namespaced
+*** Every definition gets namespaced
 Any definitions inside =BODY= will have =NAME= prepended to the
 symbol given:
 #+begin_src emacs-lisp
@@ -67,7 +67,7 @@ expands to
 (defalias 'foo-bird 'foo-free)
 #+end_src
 
-**** Function calls and variable references are treated intelligently
+*** Function calls and variable references are treated intelligently
 Any function calls (or variable names) get NAME prepended to them if
 the symbol in question has a function bind (or a variable bind,
 respectively) in the namespace. That is:
@@ -98,16 +98,16 @@ Note how the =infinite= symbol gets namespaced only as a function
 name, not when it's used as a variable, because =defspace= knowns that
 =foo-infinite= is not a variable.
 
-**** Case-by-case Examples
+*** Case-by-case Examples
 In general, =defspace= should work as you expect it to. But if you
 need to understand why something is or isn't being namespaced, have a
 look at [[https://github.com/Bruce-Connor/emacs-lisp-namespaces/blob/master/TheNittyGritty.org][TheNittyGritty.org]]
 
-*** Keywords - Customizing the behaviour
+** Keywords - Customizing the behaviour
 Immediately after the name of your space you may add keywords which
 customize the behaviour of =defspace=.
 
-**** :let-vars 
+*** :let-vars 
 If this is present, variables defined in let forms become namespaced
 (just like defvars). If this is absent, they are preserved.
 
@@ -132,7 +132,7 @@ expands to
 (let ((foo-bar foo-mo)) ...)
 #+end_src
 
-*** Why a namespace package?
+** Why a namespace package?
 Plain and simple: Emacs doesn't have namespaces, and it needs them.
 
 Emacs takes the approach of prefixing every symbol name with the name
