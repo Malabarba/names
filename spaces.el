@@ -529,6 +529,12 @@ function should indeed pop the car of BODY that many times."
 It will also be used when we implement something similar to
 `eval-defun'." )
 
+(defalias 'spaces--keyword-:assume-var-quote 'car
+  "The :assume-var-quote keyword indicates symbols quoted with `quote' should be considered variable names." )
+
+(defalias 'spaces--keyword-:dont-assume-function-quote 'car
+  "The :dont-assume-function-quote keyword indicates symbols quoted with `function' should NOT be considered function names." )
+
 
 ;;; ---------------------------------------------------------------
 ;;; Interpreting the actual forms found in BODY of the main macro.
@@ -668,14 +674,29 @@ whether the form was a quote."
         func)
     (if (eq (car-safe kadr) 'lambda)
         (list (car form) (spaces-convert-form kadr))
-      ;; A symbol inside a function quote should be a function.
-      (if (and (symbolp kadr)
-               (eq (car form) 'function))
-          (if (setq func (spaces--remove-protection kadr))
-              (list (car form) func)
-            (if (spaces--fboundp kadr)
-                (list (car form) (spaces--prepend kadr))
-              form))
+      (if (symbolp kadr)
+          (cond
+           ;; A symbol inside a function quote should be a function,
+           ;; unless the user disabled that.
+           ((and (eq (car form) 'function)
+                 (null (spaces--keyword :dont-assume-function-quote)))
+            (list 'function
+                  (or (spaces--remove-protection kadr)
+                      (if (spaces--fboundp kadr)
+                          (spaces--prepend kadr)
+                        kadr))))
+           
+           ;; A symbol inside a regular quote should be a function, if
+           ;; the user asked for that.
+           ((and (eq (car form) 'quote)
+                 (spaces--keyword :assume-var-quote))
+            (list 'quote
+                  (or (spaces--remove-protection kadr)
+                      (if (spaces--boundp kadr)
+                          (spaces--prepend kadr)
+                        kadr))))
+
+           (t form))
         form))))
 
 (defalias 'spaces--convert-function 'spaces--convert-quote)
