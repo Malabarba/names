@@ -47,10 +47,9 @@
 
 (require 'cl-lib)
 
-(eval-when-compile
-  '(require 'noflet))
-(eval-when-compile
-  '(require 'edebug))
+(eval-when-compile '(require 'noflet))
+(eval-when-compile '(require 'edebug))
+
 ;;; Support
 (unless (fboundp 'function-get)
   (defun function-get (f prop &optional autoload)
@@ -496,10 +495,13 @@ phenomenally. So we hack into edebug instead."
 ;;; Interpreting keywords passed to the main macro.
 (defun spaces--handle-keyword (body)
   "Call the function that handles the keyword at the car of BODY.
-The function must be named `spaces--keyword-KEY' (including
-the :), and must return whatever information is to be stored in
-`spaces--keywords'. The car of BODY will be popped later, so
-the function generally shouldn't do that. For simple keywords,
+The function must be named `spaces--keyword-KEY' (including the
+colon), and must return whatever information is to be stored in
+`spaces--keywords'. Usually, this information is at least the
+keyword itself.
+
+The car of BODY is the keyword itself. It will be popped later,
+so the function generally shouldn't do that. For simple keywords,
 the function can simply be an alias for `car'.
 
 However, if the keyword takes one or more arguments, then this
