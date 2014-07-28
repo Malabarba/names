@@ -426,7 +426,8 @@ phenomenally. So we hack into edebug instead."
         (let ((edebug-all-forms t)
               (edebug-all-defs t)
               (spaces--is-inside-macro 0))
-          (noflet ((edebug-form (cursor) (spaces--edebug-form cursor))
+          (noflet ((message (&rest _) (apply 'format _))
+                   (edebug-form (cursor) (spaces--edebug-form cursor))
                    (edebug-make-enter-wrapper
                     (forms)
                     (setq edebug-def-name
