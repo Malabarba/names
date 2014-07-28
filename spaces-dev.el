@@ -40,13 +40,12 @@
 
 ;;; ---------------------------------------------------------------
 ;;; Developer Utility Functions
-(defmacro space-compare-forms (name form-a form-b)
+(defmacro spaces-compare-forms (name form-a form-b)
   "Test if (namespace NAME FORM-A) is the same as FORM-B."
   (declare (indent (lambda (&rest x) 0))
            (debug (symbolp sexp form)))
   (equal
-   (let ((spaces--name name))
-     (spaces-convert-form form-a))
+   (macroexpand-all (defspace name :global :verbose form-a))
    (macroexpand-all form-b)))
 
 (defmacro spaces-compare-forms-assert (name form-a form-b)
@@ -54,10 +53,8 @@
   (declare (indent (lambda (&rest x) 0))
            (debug (symbolp sexp form)))
   (cl-assert
-   (equal
-    (let ((spaces--name name))
-      (spaces-convert-form form-a))
-    (macroexpand-all form-b)) t))
+   (spaces-compare-forms name form-a form-b)
+    t))
 
 (defmacro spaces-print (name &rest forms)
   "Return the expanded results of (namespace NAME :global :verbose FORMS).
