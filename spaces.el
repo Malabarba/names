@@ -425,7 +425,11 @@ phenomenally. So we hack into edebug instead."
         (let ((edebug-all-forms t)
               (edebug-all-defs t)
               (spaces--is-inside-macro 0))
-          (noflet ((message (&rest _) (apply 'format _))
+          (noflet ((message
+                    (&rest _)
+                    (if (spaces--keyword :verbose)
+                        (apply this-fn _)
+                      (apply 'format _)))
                    (edebug-form (cursor) (spaces--edebug-form cursor))
                    (edebug-make-enter-wrapper
                     (forms)
@@ -433,8 +437,7 @@ phenomenally. So we hack into edebug instead."
                           (or edebug-def-name
                               edebug-old-def-name
                               (cl-gensym "spaces-edebug-anon")))
-                    ;; (caddr (cadr (car (last (funcall this-fn forms)))))
-                    (car forms)))
+                    (cons 'progn forms)))
             (edebug-read-top-level-form))))
     (invalid-read-syntax
      (spaces--warn "Couldn't namespace this macro using its (debug ...) declaration: %s"
