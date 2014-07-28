@@ -660,6 +660,27 @@ list."
       (cons (spaces--prepend name)
             (cddr form))))))
 
+(defun spaces--convert-define-minor-mode (form)
+  "Special treatment for `define-derived-mode' FORM.
+Identical to defvar, just doesn't add the symbol to the boundp
+list."
+  (let ((name (cadr form))
+        (keymap (nth 5 form)))
+    ;; Register the mode name
+    (add-to-list 'spaces--fbound name)
+    (add-to-list 'spaces--bound name)
+    ;; Register the keymap
+    (if (null (symbolp keymap))
+        (add-to-list 'spaces--bound (intern (format "%s-map" name)))
+      (when (setq keymap (spaces--remove-namespace keymap))
+        (add-to-list 'spaces--bound keymap)))
+    ;; And here we namespace it.
+    (spaces--macro-args-using-edebug
+     (cons
+      (car form)
+      (cons (spaces--prepend name)
+            (cddr form))))))
+
 (defun spaces--convert-quote (form)
   "Special treatment for `quote' FORM.
 When FORM is (quote argument), argument is parsed for namespacing
