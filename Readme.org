@@ -24,16 +24,16 @@ of previous packages attempting similar things.
 To use this in your package:
 
 1. Remember to list =names= as a dependency.
-2. Wrap all code that's to be namespaced inside a =(defspace NAME ...)= macro.
+2. Wrap all code that's to be namespaced inside a =(define-namespace NAME ...)= macro.
 3. Pleasantly remove all that redundant repetition from you code!
 4. When quoting function names, use #' instead of '.
-5. If you have =;;;###autoload= comments inside your =defspace=:
+5. If you have =;;;###autoload= comments inside your =define-namespace=:
    1. Replace them with =:autoload= keywords
-   2. Add an =;;;###autoload= tag immediately above your =defspace=.
+   2. Add an =;;;###autoload= tag immediately above your =define-namespace=.
 
 What you need to know is: when you write 
 #+begin_src emacs-lisp
-(defspace NAME 
+(define-namespace NAME 
 BODY
 )
 #+end_src
@@ -43,7 +43,7 @@ Any definitions inside =BODY= will have =NAME= prepended to the
 symbol given:
 #+begin_src emacs-lisp
 ;;;###autoload
-(defspace foo-
+(define-namespace foo-
 
 (defvar bar 1 \"docs\")
 
@@ -72,7 +72,7 @@ Any function calls (or variable names) get NAME prepended to them if
 the symbol in question has a function bind (or a variable bind,
 respectively) in the namespace. That is:
 #+begin_src emacs-lisp
-(defspace foo-
+(define-namespace foo-
 
 (defvar var nil)
 
@@ -95,17 +95,17 @@ expands to
 #+end_src
 
 Note how the =infinite= symbol gets namespaced only as a function
-name, not when it's used as a variable, because =defspace= knowns that
+name, not when it's used as a variable, because =define-namespace= knowns that
 =foo-infinite= is not a variable.
 
 *** Case-by-case Examples
-In general, =defspace= should work as you expect it to. But if you
+In general, =define-namespace= should work as you expect it to. But if you
 need to understand why something is or isn't being namespaced, have a
 look at [[https://github.com/Bruce-Connor/emacs-lisp-namespaces/blob/master/TheNittyGritty.org][TheNittyGritty.org]]
 
 ** Keywords - Customizing the behaviour
 Immediately after the name of your space you may add keywords which
-customize the behaviour of =defspace=.
+customize the behaviour of =define-namespace=.
 
 *** :let-vars 
 If this is present, variables defined in let forms become namespaced
@@ -113,7 +113,7 @@ If this is present, variables defined in let forms become namespaced
 
 For example, assuming `foo-mo' has a variable definition, the code
 #+begin_src emacs-lisp
-(defspace foo-
+(define-namespace foo-
 (let ((bar mo)) ...)
 )
 #+end_src
@@ -123,7 +123,7 @@ expands to
 #+end_src
 while
 #+begin_src emacs-lisp
-(defspace foo- :let-vars
+(define-namespace foo- :let-vars
 (let ((bar mo)) ...)
 )
 #+end_src

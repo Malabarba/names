@@ -1,5 +1,5 @@
 * The Nitty Gritty
-In general, =defspace= should work as you expect it to. But if you
+In general, =define-namespace= should work as you expect it to. But if you
 need to understand why something is or isn't being namespaced, here's
 the nitty gritty of how it happens.
 
@@ -9,7 +9,7 @@ of the list is a =lambda= form (or a =macro= form). Arbitrary lists
 are returned untouched (they are way too arbitrary to be handled
 sanely). That is:
 #+begin_src emacs-lisp
-(defspace foo-
+(define-namespace foo-
 (defun infinite (y)
   (mapcar
    '(lambda (x) (infinite x))
@@ -33,7 +33,7 @@ A symbol quoted with =quote= (or ') is
 2. namespaced as a variable if it's the second argument of a =defvaralias=
 3. returned untouched otherwise (customizable).
 #+begin_src emacs-lisp
-(defspace foo-
+(define-namespace foo-
 (defvar var nil)
 (defvaralias 'varalias 'var)
 (defun fun nil)
@@ -60,7 +60,7 @@ the =:dont-assume-function-quote= keyword to disable this behaviour,
 =function= will then be treated like =quote=.
 
 #+begin_src emacs-lisp
-(defspace foo-
+(define-namespace foo-
 (defun fun (x) x)
 (mapcar 'fun somelist)
 (mapcar #'fun somelist)
@@ -77,7 +77,7 @@ expands to
 Local variables take precedence over namespace variables.
 For instance
 #+begin_src emacs-lisp
-(defspace foo-
+(define-namespace foo-
 (defvar bar "2")
 
 (let ((bar "1"))
@@ -100,7 +100,7 @@ definitions.
 You can customize this behaviour (for the =let= case, not for argument
 lists) with the =:let-vars= keyword. Then:
 #+begin_src emacs-lisp
-(defspace foo- :let-vars
+(define-namespace foo- :let-vars
 (defvar bar "2")
 
 (let ((bar "1"))
@@ -133,7 +133,7 @@ If one of your definitions shadows a global definition, you can still
 access it by prefixing it with =::=.
 
 #+begin_src emacs-lisp
-(defspace foo-
+(define-namespace foo-
 (defun message ()  
   (message)
   (::message "Hi"))
