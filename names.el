@@ -12,7 +12,8 @@
 
 ;;; Commentary:
 ;;
-;;
+;; The description is way too large to sanely write here. Please see
+;; the URL: http://github.com/Bruce-Connor/names
 
 ;;; Instructions:
 ;;
@@ -112,7 +113,7 @@ namespace.")
   "List of variables the user shouldn't touch.")
 
 (defvar names--inside-make-autoload nil 
-  "Used in `make-autolaod' to indicate to `defspace' that we're generating autoloads.")
+  "Used in `make-autoload' to indicate to `define-namespace' that we're generating autoloads.")
 
 (defmacro names--prepend (sbl)
   "Return namespace+SBL."
@@ -131,7 +132,7 @@ namespace.")
 ;;; ---------------------------------------------------------------
 ;;; The Main Macro and Main Function.
 ;;;###autoload
-(defmacro defspace (name &rest body)
+(defmacro define-namespace (name &rest body)
   "Inside the namespace NAME, execute BODY.
 NAME can be any symbol (not quoted), but it's highly recommended
 to use some form of separator (such as :, /, or -).
@@ -140,7 +141,7 @@ This has two main effects:
 
 1. Any definitions inside BODY will have NAME prepended to the
 symbol given. Ex:
-    (namespace foo:
+    (define-namespace foo:
     (defvar bar 1 \"docs\")
     )
 expands to
@@ -149,7 +150,7 @@ expands to
 
 2. Any function calls and variable names get NAME prepended to
 them if possible. Ex:
-    (namespace foo:
+    (define-namespace foo:
     (message \"%s\" my-var)
     )
 expands to
@@ -166,17 +167,17 @@ expand instead to
 
 AUTOLOAD
 
-In order for `defspace' to work with ;;;###autoload comments just
-replace all instances of ;;;###autoload inside your `defspace'
-with :autoload, and then add an ;;;###autoload tag just above
-your `defspace'.
+In order for `define-namespace' to work with ;;;###autoload
+comments just replace all instances of ;;;###autoload inside your
+`define-namespace' with `:autoload', and then add an ;;;###autoload
+comment just above your `define-namespace'.
 
 ===============================
 
 KEYWORDS
 
 Immediately after NAME you may add keywords which customize the
-behaviour of `defspace'. For a description of these keywords, see
+behaviour of `define-namespace'. For a description of these keywords, see
 the manual on
 http://github.com/Bruce-Connor/names
 
@@ -235,11 +236,11 @@ http://github.com/Bruce-Connor/names
 ;;;###autoload
 (defadvice make-autoload (before names-before-make-autoload-advice
                                  (form file &optional expansion) activate)
-  "Make sure `make-autoload' understands defspace.
-Use a letbind to indicate to `defspace' that we're generating autoloads."
+  "Make sure `make-autoload' understands `define-namespace'.
+Use a letbind to indicate to `define-namespace' that we're generating autoloads."
   (let ((names--inside-make-autoload t)
         space)
-    (when (eq (car-safe form) 'defspace)
+    (when (eq (car-safe form) 'define-namespace)
       (setq space (macroexpand form))
       (ad-set-arg 0 space)
       (ad-set-arg 2 'expansion))))
