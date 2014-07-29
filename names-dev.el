@@ -1,20 +1,20 @@
-;;; spaces-dev.el --- Developer Functions to facilitate use of spaces.el on your package.
+;;; names-dev.el --- Developer Functions to facilitate use of names.el on your package.
 
 ;; Copyright (C) 2014 Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/spaces
-;; Prefix: spaces
+;; Prefix: names
 ;; Separator: -
 
 ;;; Commentary:
 ;;
 ;; This package has some convenient functions for developers working
-;; with spaces.el.
-;; This package is installed along with spaces.el, but to use its
+;; with names.el.
+;; This package is installed along with names.el, but to use its
 ;; features you must require it explicitly:
 ;;
-;;     (require 'spaces-dev)
+;;     (require 'names-dev)
 
 ;;; License:
 ;;
@@ -35,28 +35,28 @@
 ;; 0.1a - 2014/07/18 - Created File.
 ;;; Code:
 
-(require 'spaces)
+(require 'names)
 
 
 ;;; ---------------------------------------------------------------
 ;;; Developer Utility Functions
-(defmacro spaces-compare-forms (name form-a form-b)
+(defmacro names-compare-forms (name form-a form-b)
   "Test if (namespace NAME FORM-A) is the same as FORM-B."
   (declare (indent (lambda (&rest x) 0))
            (debug (symbolp sexp form)))
-  (equal
-   (macroexpand-all (defspace name :global :verbose form-a))
-   (macroexpand-all form-b)))
+  `(equal
+    (macroexpand-all '(defspace ,name :global :verbose ,form-a))
+    (macroexpand-all ',form-b)))
 
-(defmacro spaces-compare-forms-assert (name form-a form-b)
+(defmacro names-compare-forms-assert (name form-a form-b)
   "Assert if (namespace NAME FORM-A) is the same as FORM-B."
   (declare (indent (lambda (&rest x) 0))
            (debug (symbolp sexp form)))
   (cl-assert
-   (spaces-compare-forms name form-a form-b)
+   (names-compare-forms name form-a form-b)
     t))
 
-(defmacro spaces-print (name &rest forms)
+(defmacro names-print (name &rest forms)
   "Return the expanded results of (namespace NAME :global :verbose FORMS).
 Ideal for determining why a specific form isn't being parsed
 correctly."
@@ -65,7 +65,7 @@ correctly."
          (eval-expression-print-length (max eval-expression-print-length 300)))
      (macroexpand '(defspace ,name :global :verbose ,@forms))))
 
-(defvar spaces-font-lock
+(defvar names-font-lock
   '(("^:autoload\\_>" 0 'font-lock-warning-face prepend)
     ("(\\(\\_<defspace\\_>\\)[\t \n]+\\([^\t \n]+\\)"
      (1 'font-lock-keyword-face)
@@ -73,8 +73,8 @@ correctly."
 
 (setq lisp-el-font-lock-keywords-2
       (append
-       spaces-font-lock
+       names-font-lock
        lisp-el-font-lock-keywords-2))
 
-(provide 'spaces-dev)
-;;; spaces-dev.el ends here.
+(provide 'names-dev)
+;;; names-dev.el ends here.
