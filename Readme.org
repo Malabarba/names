@@ -1,11 +1,11 @@
 #+OPTIONS: toc:nil num:nil
 
-* Spaces
+* Names
 [[file:package-example.png]]
-/Example usage of Spaces to namespace an emacs-lisp function./
+/Example usage of Names to namespace an emacs-lisp function./
 *** A Namespace implementation for Emacs-Lisp
 
-The *Spaces* package aims to provide an implementation of
+The *Names* package aims to provide an implementation of
 namespaces in Emacs with two guiding principles:
 
 - Completeness :: It should support any macro/function/special-form
@@ -23,7 +23,7 @@ of previous packages attempting similar things.
 
 To use this in your package:
 
-1. Remember to list =spaces= as a dependency.
+1. Remember to list =names= as a dependency.
 2. Wrap all code that's to be namespaced inside a =(defspace NAME ...)= macro.
 3. Pleasantly remove all that redundant repetition from you code!
 4. When quoting function names, use #' instead of '.
@@ -143,16 +143,16 @@ to write.
 Below is an example from =package.el=, the word "/package/" is repeated
 7 times in a 10-line function definition.
 
-*Spaces* doesn't change this overall approach, in fact, it's
-completely invisible to the end-user. *Spaces* simply gives /you/ (the
+*Names* doesn't change this overall approach, in fact, it's
+completely invisible to the end-user. *Names* simply gives /you/ (the
 developer) a convenient way of writing code that adheres to this
 standard.
 
 [[file:package-example.png]]
-/Example usage of Spaces to namespace an emacs-lisp function./
+/Example usage of Names to namespace an emacs-lisp function./
 
 - At runtime, the right-hand-side will create the same definitions as the left-hand-side.
-- At compilation, it will create the exact same compiled file (with no leftover reference to =spaces.el= functions).
+- At compilation, it will create the exact same compiled file (with no left-over reference to =names.el= functions).
 
 *** Tested On:
 

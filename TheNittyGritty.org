@@ -118,13 +118,13 @@ will expand to
 ** Macros
 Macros are handled in a very intelligent manner. 
 
-*Spaces* needs to know which parts of a macro's arguments are
+*Names* needs to know which parts of a macro's arguments are
 evaluatable forms, and which are just arbitrary symbols. This present
 a challenge because macro arguments could be absolutely anything.
 Fortunately, macros already provide that information in their =debug=
 declaration.
 
-This, *Spaces* uses the macro's =edebug-spec-list= to find out which
+Thus, *Names* uses the macro's =edebug-spec-list= to find out which
 arguments are evaluatable forms, and namespaces only those. Other
 arguments are left untouched. Usually, this is not something you'll
 need to worry about, it should just do what you expect from it.
