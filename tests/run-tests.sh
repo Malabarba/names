@@ -5,5 +5,6 @@ if [ -z "$EMACS" ] ; then
 fi
 
 for n in *-tests.el; do
-    $EMACS -batch -l tests.el -l "$n" -f ert-run-tests-batch-and-exit
+    $EMACS -batch -l tests.el -l "$n" -f ert-run-tests-batch-and-exit || rc=$?
 done;
+exit $rc

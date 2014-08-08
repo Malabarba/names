@@ -27,7 +27,7 @@
 
 ;;; Code:
 
-(require 'spaces)
+(require 'names)
 (defgroup dash ()
   "Customize group for dash.el"
   :group 'lisp
@@ -53,7 +53,8 @@ special values."
   "Destructive: Set LIST to the cdr of LIST."
   `(setq ,list (cdr ,list)))
 
-(namespace -
+(define-namespace -
+  
 (defmacro -each (list &rest body)
   "Anaphoric form of `-each'."
   (declare (debug (form body))

@@ -68,7 +68,7 @@
 
 (eval-when-compile (require 'cl))
 
-(require 'spaces)
+(require 'names)
 (defconst ELNODE-FORM-DATA-TYPE "application/x-www-form-urlencoded"
   "The type of HTTP Form POSTs.")
 
@@ -329,7 +329,7 @@ is ignored."
       :elnode-defer-mode defer-mode)
     proc))
 
-(namespace elnode-
+(define-namespace elnode-
            
 (defvar server-socket nil
   "Where we store the server sockets.

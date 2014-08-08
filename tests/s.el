@@ -27,9 +27,9 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'spaces))
+(eval-when-compile (require 'names))
 
-(namespace s-
+(define-namespace s-
 
 (defun trim-left (s)
   "Remove whitespace at the beginning of S."
