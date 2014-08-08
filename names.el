@@ -259,7 +259,8 @@ See macro `namespace' for more information."
           func)
       (cond
        ;; If symbol is protected, clean it.
-       ((setq func (names--remove-protection kar))
+       ((and (symbolp kar)
+             (setq func (names--remove-protection kar)))
         (names--message "Protected: %s" kar)
         ;; And decide what to do with it.
         (names--handle-args func (cdr form)))
@@ -814,6 +815,14 @@ If STAR is non-nil, parse as a `let*'."
 (defun names--convert-let* (form)
   "Special treatment for `let' FORM."
   (names--convert-let form t))
+
+(defun names--convert-cond (form)
+  "Special treatment for `cond' FORM."
+  (cons
+   (car form)
+   (mapcar
+    (lambda (x) (mapcar #'names-convert-form x))
+    (cdr form))))
 
 (defun names--convert-condition-case (form)
   "Special treatment for `condition-case' FORM."
