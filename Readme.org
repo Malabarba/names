@@ -1,6 +1,9 @@
 #+OPTIONS: toc:nil num:nil
 
 * Names
+/NOTE:/ While development on *Names* is mostly done, it is still
+undergoing tests. Get in touch if you'd like to test.
+
 [[file:package-example.png]]
 /Example usage of Names to namespace an emacs-lisp function./
 *** A Namespace implementation for Emacs-Lisp
