@@ -5,7 +5,7 @@
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
 ;; Version: 0.5
-;; Package-Requires: ((emacs "24.1") (cl-lib "1.0") (noflet "0.0.11"))
+;; Package-Requires: ((emacs "24.1"))
 ;; Keywords:
 ;; Prefix: names
 ;; Separator: -
@@ -46,9 +46,6 @@
 ;; 0.1a - 2014/05/20 - Created File.
 ;;; Code:
 
-(require 'cl-lib)
-
-(eval-when-compile (require 'noflet))
 (eval-when-compile (require 'edebug))
 
 ;;; Support
@@ -71,6 +68,19 @@ if it's an autoloaded macro."
               nil                         ;Re-try `get' on the same `f'.
             (setq f fundef))))
       val)))
+
+(unless (fboundp 'macrop)
+  (defun macrop (object)
+    "Non-nil if and only if OBJECT is a macro."
+    (let ((def (indirect-function object t)))
+      (when (consp def)
+        (or (eq 'macro (car def))
+            (and (autoloadp def) (memq (nth 4 def) '(macro t))))))))
+
+(unless (fboundp 'autoloadp)
+  (defsubst autoloadp (object)
+    "Non-nil if OBJECT is an autoload."
+    (eq 'autoload (car-safe object))))
 
 
 ;;; ---------------------------------------------------------------
@@ -124,9 +134,11 @@ namespace.")
 (defmacro names--filter-if-bound (var &optional pred)
   "If VAR is bound and is a list, take the car of its elements which satify PRED."
   (declare (debug (symbolp function-form)))
-  (when (boundp var)
-    `(cl-remove-if
-      ,pred (mapcar (lambda (x) (or (car-safe x) x)) ,var))))
+  `(when (boundp ',var)
+     (remove
+      nil
+      (mapcar (lambda (x) (when (funcall ,pred (or (car-safe x) x))
+                       (or (car-safe x) x))) ,var))))
 
 
 ;;; ---------------------------------------------------------------
@@ -213,7 +225,7 @@ http://github.com/Bruce-Connor/names
         ;; First have to populate the bound and fbound lists. So we read
         ;; the entire form (without evaluating it).
         (mapc 'names-convert-form body)
-        (cl-incf names--current-run)
+        (setq names--current-run (1+ names--current-run))
         ;; Then we go back and actually namespace the entire form, which
         ;; we return so that it can be evaluated.
         (cons 'progn (mapcar 'names-convert-form
@@ -305,16 +317,21 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
    ;; Values
    (t form)))
 
+(defvar names--ignored-forms '(declare)
+  "The name of functions/macros/special-forms which we return without reading.")
+
 (defun names--handle-args (func args)
   "Generic handling for the form (FUNC . ARGS), without namespacing FUNC."
-  (let ((handler (intern (format "names--convert-%s" func))))
-    ;; Some function-like forms get special handling.
-    ;; That's anything with a names--convert-%s function defined.
-    (if (fboundp handler)
-        (progn (names--message "Special handling: %s" handler)
-               (funcall handler (cons func args)))
-      ;; If it isn't special, it's either a function or a macro.
-      (names--args-of-function-or-macro func args (macrop func)))))
+  (if (memq func names--ignored-forms)
+      (cons func args)
+    (let ((handler (intern (format "names--convert-%s" func))))
+      ;; Some function-like forms get special handling.
+      ;; That's anything with a names--convert-%s function defined.
+      (if (fboundp handler)
+          (progn (names--message "Special handling: %s" handler)
+                 (funcall handler (cons func args)))
+        ;; If it isn't special, it's either a function or a macro.
+        (names--args-of-function-or-macro func args (macrop func))))))
 
 (defun names--message (f &rest rest)
   "If :verbose is on, pass F and REST to `message'."
@@ -393,13 +410,15 @@ returns nil."
 (defun names--args-of-function-or-macro (name args macro)
   "Check whether NAME is a function or a macro, and handle ARGS accordingly."
   (if macro
-      (cl-case (names--get-edebug-spec name)
+      (let ((it (names--get-edebug-spec name)))
         ;; Macros where we evaluate all arguments are like functions.
-        ((t) (names--args-of-function-or-macro name args nil))
-        ;; Macros where nothing is evaluated we can just return.
-        (0 (cons name args))
-        ;; Other macros are complicated. Ask edebug for help.
-        (t (names--macro-args-using-edebug (cons name args))))
+        (if (equal it t)
+            (names--args-of-function-or-macro name args nil)
+          ;; Macros where nothing is evaluated we can just return.
+          (if (equal it 0)
+              (cons name args)
+            ;; Other macros are complicated. Ask edebug for help.
+            (names--macro-args-using-edebug (cons name args)))))
     ;; We just convert the arguments of functions.
     (cons name (mapcar 'names-convert-form args))))
 
@@ -419,6 +438,9 @@ returns nil."
 (defvar names--is-inside-macro nil 
   "Auxiliary var used in `names--macro-args-using-edebug'.")
 
+(defvar names--gensym-counter 0
+  "")
+
 (defun names--macro-args-using-edebug (form)
   "Namespace the arguments of macro FORM by hacking into edebug.
 This takes advantage of the fact that macros (should) declare a
@@ -430,7 +452,6 @@ it matches (cdr FORM), but that would take a lot of work and
 we'd be reimplementing something that edebug already does
 phenomenally. So we hack into edebug instead."
   (require 'edebug)
-  (require 'noflet)
   (condition-case nil
       (with-temp-buffer
         (pp form 'insert)
@@ -438,24 +459,54 @@ phenomenally. So we hack into edebug instead."
         (let ((edebug-all-forms t)
               (edebug-all-defs t)
               (names--is-inside-macro form))
-          (noflet ((message
-                    (&rest _)
-                    (if (names--keyword :verbose)
-                        (apply this-fn _)
-                      (apply 'format _)))
-                   (edebug-form (cursor) (names--edebug-form cursor))
-                   (edebug-make-enter-wrapper
-                    (forms)
-                    (setq edebug-def-name
-                          (or edebug-def-name
-                              edebug-old-def-name
-                              (cl-gensym "names-edebug-anon")))
-                    (cons 'progn forms)))
-            (edebug-read-top-level-form))))
+          (unwind-protect
+              (progn
+                (names--override-definition 'message 'names--edebug-message)
+                (names--override-definition 'edebug-form 'names--edebug-form)
+                (names--override-definition 'edebug-make-enter-wrapper 'names--edebug-make-enter-wrapper)
+                (edebug-read-top-level-form))
+            (names--restore-edebug-backups))))
     (invalid-read-syntax
      (names--warn "Couldn't namespace this macro using its (debug ...) declaration: %s"
-                   form)
+                  form)
      form)))
+
+(defvar names--edebug-backups nil)
+
+(defun names--restore-edebug-backups ()
+  "Disable overridings we used for hacking into edebug."
+  (dolist (it names--edebug-backups)
+    (names--message "Restoring %s to %s" (car it) (eval (cdr it)))
+    (fset (car it) (eval (cdr it))))
+  (setq names--edebug-backups nil))
+
+(defun names--override-definition (sym newdef)
+  "Temporarily override SYM's function definition with NEWDEF.
+The original definition is saved to names--SYM-backup."
+  (let ((backup-name (intern (format "names--%s-backup" sym)))
+        (def (symbol-function sym)))
+    (unless (assoc sym names--edebug-backups)
+      (message "Overriding %s with %s" sym newdef)
+      (eval (list 'defvar backup-name nil))
+      (add-to-list 'names--edebug-backups (cons sym backup-name))
+      (set backup-name def)
+      (fset sym newdef))))
+
+(defun names--edebug-message (&rest _)
+  (if (names--keyword :verbose)
+      (apply names--message-backup _)
+    (apply 'format _)))
+
+(defun names--edebug-make-enter-wrapper (forms)
+  (setq edebug-def-name
+        (or edebug-def-name
+            edebug-old-def-name
+            (let ((pfix "names-edebug-anon")
+                  (num (prog1 names--gensym-counter
+                         (setq names--gensym-counter
+                               (1+ names--gensym-counter)))))
+              (make-symbol (format "%s%d" pfix num)))))
+  (cons 'progn forms))
 
 (defun names--edebug-form (cursor)
   "Parse form given by CURSOR using edebug, and namespace it if necessary."
@@ -517,7 +568,7 @@ phenomenally. So we hack into edebug instead."
 ;;; Interpreting keywords passed to the main macro.
 (defun names--handle-keyword (body)
   "Call the function that handles the keyword at the car of BODY.
-The function must be listed in `names--keyword-list'. If it is
+Such function must be listed in `names--keyword-list'. If it is
 nil, this function just returns.
 
 Regardless of whether a function was called, the keyword is added
@@ -605,20 +656,20 @@ behaviour.")
     ;; Set the macros debug spec if possible. It will be relevant on
     ;; the next run.
     (when (setq decl (ignore-errors (cond
-                       ((eq (car-safe (nth 3 form)) 'declare)
-                        (nth 3 form))
-                       ((and (stringp (nth 3 form))
-                             (eq (car-safe (nth 4 form)) 'declare))
-                        (nth 4 form))
-                       (t nil))))
+                                     ((eq (car-safe (nth 3 form)) 'declare)
+                                      (nth 3 form))
+                                     ((and (stringp (nth 3 form))
+                                           (eq (car-safe (nth 4 form)) 'declare))
+                                      (nth 4 form))
+                                     (t nil))))
       (setq decl (car (cdr-safe (assoc 'debug (cdr decl)))))
+      (message "declaration: %s" decl)
       (when decl (put spaced-name 'edebug-form-spec decl)))
     ;; Then convert the macro as a defalias.
-    (names-convert-form
-     (macroexpand
-      (cons
-       (car form)
-       (cons spaced-name (cddr form)))))))
+    (cons
+     (car form)
+     (names--convert-lambda
+      (cons spaced-name (cddr form))))))
 (defalias 'names--convert-defmacro* 'names--convert-defmacro)
 
 (defun names--convert-defvar (form &optional dont-add)
@@ -640,7 +691,7 @@ behaviour.")
 (defun names--convert-defvaralias (form)
   "Special treatment for `defvaralias' FORM."
   (let ((name (eval (cadr form)))
-        (name2 (eval (cl-caddr form))))
+        (name2 (eval (car (cddr form)))))
     (add-to-list 'names--bound name)
     (append
      (list
@@ -652,7 +703,7 @@ behaviour.")
 (defun names--convert-custom-declare-variable (form)
   "Special treatment for `custom-declare-variable' FORM."
   (let ((name (eval (cadr form))) ;;ignore-errors
-        (val (cl-caddr form)))
+        (val (car (cddr form))))
     (add-to-list 'names--bound name)
     (append
      (list
@@ -780,10 +831,15 @@ Currently, we just return FORM without namespacing anything."
 
 (defun names--vars-from-arglist (args)
   "Get a list of local variables from a generalized arglist ARGS."
-  (cl-remove-if
-   (lambda (x) (string-match "^&" (symbol-name x)))
-   (mapcar (lambda (x) (or (cdr-safe (car-safe x)) (car-safe x) x))
-           args)))
+  (remove
+   nil
+   (mapcar
+    (lambda (x)
+      (let ((symb (or (cdr-safe (car-safe x)) (car-safe x) x)))
+        (when (and (symbolp symb) 
+                   (string-match "^&" (symbol-name symb)))
+          symb)))
+    args)))
 
 (defun names--convert-defun (form)
   "Special treatment for `defun' FORM."
