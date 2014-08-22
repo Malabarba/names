@@ -492,6 +492,9 @@ The original definition is saved to names--SYM-backup."
       (set backup-name def)
       (fset sym newdef))))
 
+(defvar names--message-backup nil 
+  "Where names stores `message's definition while overriding it.")
+
 (defun names--edebug-message (&rest _)
   (if (names--keyword :verbose)
       (apply names--message-backup _)
