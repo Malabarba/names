@@ -219,8 +219,8 @@ http://github.com/Bruce-Connor/names
              names--keywords names--local-vars key-and-args)
         ;; Read keywords
         (while (setq key-and-args (names--next-keyword body))
-          (push (names--handle-keyword key-and-args)
-                names--keywords))
+          (names--handle-keyword key-and-args)
+          (push key-and-args names--keywords))
         ;; First have to populate the bound and fbound lists. So we read
         ;; the entire form (without evaluating it).
         (mapc 'names-convert-form body)
@@ -234,18 +234,19 @@ http://github.com/Bruce-Connor/names
                                body))))
     (mapc (lambda (x) (set x nil)) names--var-list)))
 
-(defun names--next-keyword (body)
+(defmacro names--next-keyword (body)
   "If car of BODY is a known keyword, `pop' it (and its arguments) from body.
 Returns a list (KEYWORD . ARGUMENTLIST)."
-  (let ((kar (car-safe body))
-        out n)
-    (and kar
-         (keywordp kar)
-         (setq n (assoc kar names--keyword-list))
-         (setq n (cadr n))
-         (dotimes (it n out)
-           (push (pop body) out))
-         (nreverse out))))
+  (declare (debug sexp))
+  `(let ((kar (car-safe ,body))
+         out n)
+     (and kar
+          (keywordp kar)
+          (setq n (assoc kar names--keyword-list))
+          (setq n (cadr n))
+          (dotimes (it (1+ n) out)
+            (push (pop ,body) out))
+          (nreverse out))))
 
 (defun names--extract-autoloads (body)
   "Return a list of the forms in BODY preceded by :autoload."
@@ -394,7 +395,7 @@ are namespaced become un-namespaced."
 
 (defun names--keyword (keyword)
   "Was KEYWORD one of the keywords passed to the `namespace' macro?"
-  (memq keyword names--keywords))
+  (assoc keyword names--keywords))
 
 (defun names--boundp (sbl)
   "Is namespace+SBL a boundp symbol?
@@ -485,7 +486,7 @@ The original definition is saved to names--SYM-backup."
   (let ((backup-name (intern (format "names--%s-backup" sym)))
         (def (symbol-function sym)))
     (unless (assoc sym names--edebug-backups)
-      (message "Overriding %s with %s" sym newdef)
+      (names--message "Overriding %s with %s" sym newdef)
       (eval (list 'defvar backup-name nil))
       (add-to-list 'names--edebug-backups (cons sym backup-name))
       (set backup-name def)
@@ -581,7 +582,7 @@ the keyword arguments, if any."
   (let ((func (nth 2 (assoc (car body) names--keyword-list))))
     (if (functionp func)
         (apply func (cdr body))
-      (error "[names] Keyword %s not recognized" (car body)))))
+      nil)))
 
 (defconst names--keyword-list
   '((:protection 1 
