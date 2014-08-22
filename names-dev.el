@@ -108,10 +108,8 @@ Argument EDEBUG-IT is the same as `eval-defun'."
          (macroexpand
           `(define-namespace ,name :global ,@keylist ,form))
          (current-buffer)))
-      (switch-to-buffer b)
-      ;; (unless edebug-it
-      ;;   (kill-buffer b))
-      )))
+      (unless edebug-it
+        (kill-buffer b)))))
 
 (defun names--looking-at-namespace ()
   "Non-nil if point is at a `define-namespace' form or an alias to it."
