@@ -133,7 +133,7 @@ namespace.")
 
 (defmacro names--filter-if-bound (var &optional pred)
   "If VAR is bound and is a list, take the car of its elements which satify PRED."
-  (declare (debug (symbolp function-form)))
+  (declare (debug (symbolp &optional function-form)))
   `(when (boundp ',var)
      (remove
       nil
@@ -207,7 +207,6 @@ http://github.com/Bruce-Connor/names
              (names--bound
               (names--remove-namespace-from-list
                (names--filter-if-bound byte-compile-bound-variables)
-               (names--filter-if-bound byte-compile-constants)
                (names--filter-if-bound byte-compile-variables)))
              (names--fbound
               (names--remove-namespace-from-list
