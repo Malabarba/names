@@ -76,5 +76,63 @@ correctly."
        names-font-lock
        lisp-el-font-lock-keywords-2))
 
+(defun names-eval-defun (edebug-it)
+  "Identical to `eval-defun', except it works for forms inside namespaces.
+Argument EDEBUG-IT is the same as `eval-defun'."
+  (interactive "P")
+  (let ((body
+         (save-excursion
+           (when (progn
+                   (end-of-defun)
+                   (beginning-of-defun)
+                   (condition-case nil
+                       (progn (backward-up-list)
+                              (names--looking-at-namespace))
+                     (error nil)))
+             (cdr (read (current-buffer))))))
+        form b keylist spec)
+    (if (null body)
+        (eval-defun edebug-it)
+      (setq name (pop body))
+      (while (setq spec (names--next-keyword body))
+        (setq keylist
+              (append keylist spec)))
+      (setq form
+            (save-excursion
+              (end-of-defun)
+              (beginning-of-defun)
+              (read (current-buffer))))
+      (setq b (names--generate-new-buffer form))
+      (with-current-buffer b
+        (pp
+         (macroexpand
+          `(define-namespace ,name :global ,@keylist ,form))
+         (current-buffer)))
+      (switch-to-buffer b)
+      ;; (unless edebug-it
+      ;;   (kill-buffer b))
+      )))
+
+(defun names--looking-at-namespace ()
+  "Non-nil if point is at a `define-namespace' form or an alias to it."
+  (when (looking-at "(\\_<")
+    (save-excursion
+      (forward-char 1)
+      (ignore-errors
+        (equal (symbol-function (intern (thing-at-point 'symbol)))
+               (symbol-function 'define-namespace))))))
+
+(defun names--generate-new-buffer (&optional form)
+  "Generate and return a new buffer.
+If FORM is provided, try to use it to decide an informative
+buffer name."
+  (generate-new-buffer
+   (concat
+    " *names"
+    (if form " " "")
+    (if (and form (listp form)) (format "%s" (car form)) "")
+    (if (and form (listp form)) (format "%s" (or (car (cdr form)) "")) "")
+    "*")))
+
 (provide 'names-dev)
 ;;; names-dev.el ends here.
