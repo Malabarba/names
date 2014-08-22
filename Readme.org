@@ -31,14 +31,8 @@ To use this in your package:
    1. Replace them with =:autoload= keywords
    2. Add an =;;;###autoload= tag immediately above your =define-namespace=.
 
-What you need to know is: when you write 
-#+begin_src emacs-lisp
-(define-namespace NAME 
-BODY
-)
-#+end_src
-the following two rules will be applied
-*** Every definition gets namespaced
+*What you need to know:* There are essentially two rules that are applied when namespacing.
+*** 1. Every definition gets namespaced
 Any definitions inside =BODY= will have =NAME= prepended to the
 symbol given:
 #+begin_src emacs-lisp
@@ -67,36 +61,46 @@ expands to
 (defalias 'foo-bird 'foo-free)
 #+end_src
 
-*** Function calls and variable references are treated intelligently
+Note, in the last line, ='bird= is expanded because it is the name of
+a definition, and ='free= is expanded because =foo-free= is known to
+be defined.
+
+*** 2. Functions and variables are namespaced if defined
 Any function calls (or variable names) get NAME prepended to them if
-the symbol in question has a function bind (or a variable bind,
-respectively) in the namespace. That is:
+the symbol in question is defined as a function (or a variable,
+respectively) inside the current =define-namespace= form. It doesn't
+matter if the function/variable is called before actually being
+defined, *Names* will find it.
+
+That is:
 #+begin_src emacs-lisp
 (define-namespace foo-
 
-(defvar var nil)
+(defvar var infinite)
 
 (defun infinite (x)
   (infinite x))
 
-(infinite var)
-(infinite infinite)
+(cond
+ ((infinite var) (message "That was a function call."))
+ (infinite (message "That was a variable.")))
 )
 #+end_src
 expands to
 #+begin_src emacs-lisp
-(defvar foo-myvar nil)
+(defvar foo-myvar infinite)
 
 (defun foo-infinite (x)
   (foo-infinite x))
 
-(foo-infinite foo-var)
-(foo-infinite infinite)
+(cond
+ ((foo-infinite foo-var) (message "That was a function call."))
+ (infinite (message "That was a variable.")))
 #+end_src
 
-Note how the =infinite= symbol gets namespaced only as a function
-name, not when it's used as a variable, because =define-namespace= knowns that
-=foo-infinite= is not a variable.
+Note how the =infinite= symbol gets namespaced only as a function name
+(/not/ when it's used as a variable), because =define-namespace=
+knowns that =foo-infinite= is not a variable.
 
 *** Case-by-case Examples
 In general, =define-namespace= should work as you expect it to. But if you
@@ -105,13 +109,15 @@ look at [[https://github.com/Bruce-Connor/emacs-lisp-namespaces/blob/master/TheN
 
 ** Keywords - Customizing the behaviour
 Immediately after the name of your space you may add keywords which
-customize the behaviour of =define-namespace=.
+customize the behaviour of =define-namespace=. See the variable
+=names--keyword-list= for a description of each possible keyword.
 
 *** :let-vars 
 If this is present, variables defined in let forms become namespaced
 (just like defvars). If this is absent, they are preserved.
 
-For example, assuming `foo-mo' has a variable definition, the code
+For example, assuming both =foo-mo= and =foo-bar= have a variable
+definitions, the code
 #+begin_src emacs-lisp
 (define-namespace foo-
 (let ((bar mo)) ...)
@@ -155,11 +161,16 @@ standard.
 - At compilation, it will create the exact same compiled file (with no left-over reference to =names.el= functions).
 
 *** Tested On:
-
+*Names* is still in testing phase. If you're interested, try using it
+ with one of your packages and [[https://github.com/Bruce-Connor/names/issues][let me know how it goes]]. Below are the
+ packages which I've tested it on.
 **** elnode
-- *Number of tests passed:* Same as before namespacing (62).
+- *Number of ert tests passed:* Same as before namespacing (62).
 - *Reduction in code size:* Approx. 2000 characters.
 **** s.el
-- *Number of tests passed:* All.
-- *Reduction in code size:* Approx. 1000 characters (8%).
+- *Number of ert tests passed:* All.
+- *Reduction in code size:* Approx. 1000 characters (8%). 
+1000 characters is a lot when you consider /s.el/ has the second
+shortest namespace possible, =s-=.
 **** dash.el
+- *Number of ert tests passed:* Same as before namespacing (104).
