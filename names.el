@@ -804,11 +804,6 @@ whether the form was a quote."
 
 (defalias 'names--convert-function 'names--convert-quote)
 
-(defun names--convert-\` (form)
-  "Special treatment for backtick FORM.
-Currently, we just return FORM without namespacing anything."
-  form)
-
 (defun names--convert-lambda (form)
   "Special treatment for `lambda' FORM."
   (let ((names--local-vars
