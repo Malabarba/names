@@ -205,13 +205,11 @@ http://github.com/Bruce-Connor/names
               (names--remove-namespace-from-list
                (names--filter-if-bound byte-compile-macro-environment (lambda (x) (not (macrop x))))
                (names--filter-if-bound byte-compile-function-environment (lambda (x) (not (macrop x))))))
-             names--keywords names--local-vars)
+             names--keywords names--local-vars key-and-args)
         ;; Read keywords
-        (while (and (keywordp (car-safe body))
-                    ;; :autoload is part of body and is handled below.
-                    (null (eq (car-safe body) :autoload)))
-          (push (names--handle-keyword body) names--keywords)
-          (setq body (cdr body)))
+        (while (setq key-and-args (names--next-keyword body))
+          (push (names--handle-keyword key-and-args)
+                names--keywords))
         ;; First have to populate the bound and fbound lists. So we read
         ;; the entire form (without evaluating it).
         (mapc 'names-convert-form body)
@@ -224,6 +222,19 @@ http://github.com/Bruce-Connor/names
                                  (names--extract-autoloads body)
                                body))))
     (mapc (lambda (x) (set x nil)) names--var-list)))
+
+(defun names--next-keyword (body)
+  "If car of BODY is a known keyword, `pop' it (and its arguments) from body.
+Returns a list (KEYWORD . ARGUMENTLIST)."
+  (let ((kar (car-safe body))
+        out n)
+    (and kar
+         (keywordp kar)
+         (setq n (assoc kar names--keyword-list))
+         (setq n (cadr n))
+         (dotimes (it n out)
+           (push (pop body) out))
+         (nreverse out))))
 
 (defun names--extract-autoloads (body)
   "Return a list of the forms in BODY preceded by :autoload."
@@ -506,48 +517,53 @@ phenomenally. So we hack into edebug instead."
 ;;; Interpreting keywords passed to the main macro.
 (defun names--handle-keyword (body)
   "Call the function that handles the keyword at the car of BODY.
-The function must be named `names--keyword-KEY' (including the
-colon), and must return whatever information is to be stored in
-`names--keywords'. Usually, this information is at least the
-keyword itself.
+The function must be listed in `names--keyword-list'. If it is
+nil, this function just returns.
 
-The car of BODY is the keyword itself. It will be popped later,
-so the function generally shouldn't do that. For simple keywords,
-the function can simply be an alias for `car'.
+Regardless of whether a function was called, the keyword is added
+to the variable `names--keywords'.
 
-However, if the keyword takes one or more arguments, then this
-function should indeed pop the car of BODY that many times."
-  (let ((func (intern (format "names--keyword-%s" (car body)))))
-    (if (fboundp func)
-        (funcall func body)
+The car of BODY is the keyword itself and the other elements are
+the keyword arguments, if any."
+  (let ((func (nth 2 (assoc (car body) names--keyword-list))))
+    (if (functionp func)
+        (apply func (cdr body))
       (error "[names] Keyword %s not recognized" (car body)))))
 
-(defun names--keyword-:protection (body)
-  "Return a cons with car and cadr of BODY and pop car."
-  (let ((kw (car body))
-        (val (symbol-name (cadr body))))
-    (cl-assert (stringp val))
-    (setq body (cdr body))
-    (setq names--protection
-          (format "\\`%s" (regexp-quote val)))
-    (cons kw val)))
+(defconst names--keyword-list
+  '((:protection 1 
+     (lambda (x) 
+       (let ((val (symbol-name x)))
+         (setq names--protection
+               (format "\\`%s" (regexp-quote val)))))
+     "Change the value of the `names--protection' variable.")
 
-(defalias 'names--keyword-:let-vars 'car
-  "The :let-vars keyword indicates variables assigned in let-bind are candidates for namespacing.")
+    (:let-vars 0 nil
+     "Indicates variables assigned in let-bind are candidates for namespacing.")
 
-(defalias 'names--keyword-:verbose 'car
-  "The :verbose keyword causes a message to be called on each special form.")
+    (:verbose 0 nil
+     "Cause a message to be called on each special form.")
 
-(defalias 'names--keyword-:global 'car
-  "The :global keyword is used to accept namespaced names from outside current namespace definition.
-It will also be used when we implement something similar to
-`eval-defun'." )
+    (:global 0 nil
+     "Accept namespaced names from outside current namespace definition.")
 
-(defalias 'names--keyword-:assume-var-quote 'car
-  "The :assume-var-quote keyword indicates symbols quoted with `quote' should be considered variable names." )
+    (:assume-var-quote 0 nil
+     "Indicate symbols quoted with `quote' should be considered variable names.")
 
-(defalias 'names--keyword-:dont-assume-function-quote 'car
-  "The :dont-assume-function-quote keyword indicates symbols quoted with `function' should NOT be considered function names." )
+    (:dont-assume-function-quote 0 nil
+     "Indicate symbols quoted with `function' should NOT be considered function names."))
+  "List of keywords used by `define-namespace'.
+Each element is a list containing
+    (KEYWORD N DEFINITION DOCUMENTATION)
+where:
+
+- KEYWORD is the keyword's name, a symbol satifying `keywordp'.
+- N is the number of arguments it takes, an integer.
+- DEFINITION is a function (symbol or lambda) that takes N
+arguments and does whatever you need for implementing the
+keyword.
+- DOCUMENTATION is a string explaining the keyword's
+behaviour.")
 
 
 ;;; ---------------------------------------------------------------
