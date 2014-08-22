@@ -39,7 +39,7 @@ symbol given:
 ;;;###autoload
 (define-namespace foo-
 
-(defvar bar 1 \"docs\")
+(defvar bar 1 "docs")
 
 :autoload
 (defun free ()
@@ -51,7 +51,7 @@ symbol given:
 #+end_src
 expands to
 #+begin_src emacs-lisp
-(defvar foo-bar 1 \"docs\")
+(defvar foo-bar 1 "docs")
 
 ;;;###autoload
 (defun foo-free ()
