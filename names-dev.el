@@ -45,7 +45,7 @@
   (declare (indent (lambda (&rest x) 0))
            (debug (symbolp sexp form)))
   `(equal
-    (macroexpand-all '(defspace ,name :global :verbose ,form-a))
+    (macroexpand-all '(define-namespace ,name :global :verbose ,form-a))
     (macroexpand-all ',form-b)))
 
 (defmacro names-compare-forms-assert (name form-a form-b)
@@ -63,7 +63,7 @@ correctly."
   (declare (indent (lambda (&rest x) 0)) (debug 0))
   `(let ((eval-expression-print-level (max eval-expression-print-level 300))
          (eval-expression-print-length (max eval-expression-print-length 300)))
-     (macroexpand '(defspace ,name :global :verbose ,@forms))))
+     (macroexpand '(define-namespace ,name :global :verbose ,@forms))))
 
 (defvar names-font-lock
   '(("^:autoload\\_>" 0 'font-lock-warning-face prepend)
