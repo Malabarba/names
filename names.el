@@ -629,25 +629,8 @@ behaviour.")
 ;; define a function called `names--convert-FORM-NAME' along the
 ;; lines of the functions defined below. It will be automatically used
 ;; whenever that form is found.
-(defvar names--name-already-prefixed nil
-  "Whether some outer function already prefixed the name of the current defalias.")
 
-(defun names--convert-defalias (form)
-  "Special treatment for `defalias' FORM."
-  (let ((dont-prefix names--name-already-prefixed))
-    (setq names--name-already-prefixed nil)
-    (list
-     (car form)
-     (if dont-prefix
-         (cadr form)
-       (let ((name (eval (cadr form)))) ;;ignore-errors
-         (add-to-list 'names--fbound name)
-         (list 'quote (names--prepend name))))
-     (names-convert-form (cadr (cdr form))))))
-
-;;; Defun, defmacro, and defsubst macros are pretty predictable. So we
-;;; expand them and handle them like defaliases, instead of handling
-;;; as general macros.
+;;; Defun, defmacro, and defsubst macros are pretty predictable. 
 (defun names--convert-defmacro (form)
   "Special treatment for `defmacro' FORM."
   (let* ((names--name-already-prefixed t)
@@ -690,18 +673,6 @@ behaviour.")
   "Special treatment for `defconst' FORM.")
 (defalias 'names--convert-defcustom 'names--convert-defvar
   "Special treatment for `defcustom' FORM.")
-
-(defun names--convert-defvaralias (form)
-  "Special treatment for `defvaralias' FORM."
-  (let ((name (eval (cadr form)))
-        (name2 (eval (car (cddr form)))))
-    (add-to-list 'names--bound name)
-    (append
-     (list
-      (car form)
-      (list 'quote (names--prepend name))
-      (list 'quote (names-convert-form name2)))
-     (mapcar 'names-convert-form (cdr (cdr form))))))
 
 (defun names--convert-custom-declare-variable (form)
   "Special treatment for `custom-declare-variable' FORM."
