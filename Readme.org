@@ -1,24 +1,27 @@
 #+OPTIONS: toc:nil num:nil
 
 * Names
-/NOTE:/ While development on *Names* is mostly done, it is still
-undergoing tests. Get in touch if you'd like to test.
+/NOTE: While development on *Names* is mostly done, it is still undergoing tests. Get in touch if you'd like to test./
+
+*Names* is designed as a practical, complete, robust, and debuggable
+tool which writes your namespaces for you.
 
 [[file:package-example.png]]
 /Example usage of Names to namespace an emacs-lisp function./
 *** A Namespace implementation for Emacs-Lisp
 
 The *Names* package aims to provide an implementation of
-namespaces in Emacs with two guiding principles:
+namespaces in Emacs with four guiding principles:
 
-- Completeness :: It should support any macro/function/special-form
-                  available in emacs-lisp. Even the ones defined by
-                  you or a third party. It also supports *edebug* and
-                  =eval-defun=, which are essential tools for any
-                  package developer.
+- Practical :: Actually useful and easy to grasp.
+- Completeness :: Support any macro/function/special-form available in
+                  emacs-lisp, even the ones defined by you or a third
+                  party.
 - Robustness :: No-surprises, well-tested, and with clearly stated
             limitations. Yes, as complete as we aim to be,
             there will be limitations.
+- Debuggable :: Support *edebug* and =eval-defun=, as well as any
+                other essential tools for package developers.
 
 See [[https://github.com/Bruce-Connor/spaces#why-a-namespace-package][Why a namespace package?]] for a description on why this is
 necessary, and see [[https://github.com/Bruce-Connor/emacs-lisp-namespaces/blob/master/Other-Packages.org][Other-Packages.org]] for a description and comparison
@@ -26,7 +29,7 @@ of previous packages attempting similar things.
 
 **** Version Compatibility
 Currently, *Names* is being supported on Emacs 24.3 and 24.4. I'll
-soon have a tests suite setup for versions 24.2 and 24.1 as well.
+soon have a test suite setup for versions 24.2 and 24.1 as well.
 
 ** Usage
 
@@ -40,7 +43,8 @@ To use this in your package:
    1. Replace them with =:autoload= keywords
    2. Add an =;;;###autoload= tag immediately above your =define-namespace=.
 
-*What you need to know:* There are essentially two rules that are applied when namespacing.
+*What you need to know:* There are essentially three rules that are
+applied when namespacing.
 *** 1. Every definition gets namespaced
 Any definitions inside =BODY= will have =NAME= prepended to the
 symbol given:
@@ -54,8 +58,6 @@ symbol given:
 (defun free ()
   "DOC"
   (message "hi"))
-
-(defalias 'bird 'free)
 )
 #+end_src
 expands to
@@ -66,13 +68,7 @@ expands to
 (defun foo-free ()
   "DOC"
   (message "hi"))
-
-(defalias 'foo-bird 'foo-free)
 #+end_src
-
-Note, in the last line, ='bird= is expanded because it is the name of
-a definition, and ='free= is expanded because =foo-free= is known to
-be defined.
 
 *** 2. Functions and variables are namespaced if defined
 Any function calls (or variable names) get NAME prepended to them if
@@ -80,6 +76,10 @@ the symbol in question is defined as a function (or a variable,
 respectively) inside the current =define-namespace= form. It doesn't
 matter if the function/variable is called before actually being
 defined, *Names* will find it.
+
+In other words, a function call or variable name is /“looked up
+locally”/. If it is not found, it is assumed /“global”/. You can force
+a symbol to be global, by preppending it with =::=.
 
 That is:
 #+begin_src emacs-lisp
@@ -91,8 +91,10 @@ That is:
   (infinite x))
 
 (cond
- ((infinite var) (message "That was a function call."))
- (infinite (message "That was a variable.")))
+ ((::infinite 2) (message "Global function call"))
+ ((something-else t) (message "Global function call"))
+ ((infinite var) (message "Local function call."))
+ (infinite (message "Variable.")))
 )
 #+end_src
 expands to
@@ -103,13 +105,54 @@ expands to
   (foo-infinite x))
 
 (cond
+ ((infinite 2) (message "Global function call"))
+ ((something-else t) (message "Global function call"))
  ((foo-infinite foo-var) (message "That was a function call."))
  (infinite (message "That was a variable.")))
 #+end_src
 
-Note how the =infinite= symbol gets namespaced only as a function name
-(/not/ when it's used as a variable), because =define-namespace=
-knowns that =foo-infinite= is not a variable.
+Note how:
+- The =infinite= symbol gets namespaced only as a function name (/not/
+  when it's used as a variable), because =define-namespace= knowns
+  that =foo-infinite= is not a variable.
+- The symbol inside =(infinite 2)= is not namespaced, because it had
+  been protected with =::=.
+- =something-else= is not namespaced, because it is not a locally
+  defined function, so it must be global.
+
+*** 3. Forms not meant for evaluation are not namespaced.
+Whenever a form is not meant for evaluation, it is left completely
+untouched. Some examples where this applies are:
+- Lists and symbols quoted with a simple quote (e.g. = 'foo=), these are regarded as data, not code;
+- Any argument of a macro which doesn't get evaluated, e.g, the =KEYLIST= arguments of =cl-case=.
+
+Some examples of the opposite:
+- Symbols quoted with a function quote (e.g. =#'foo=) are regarded as
+  function names, and are namespaced as explained in [[#2-functions-and-variables-are-namespaced-if-defined][item 2]]. That's
+  why we recommend you always use function quotes for functions.
+- Comma forms inside a backtick form (e.g. =`(nothing ,@(function)
+  ,variable)=) *are* meant for evaluation and so *will* be namespaced.
+
+*** Limitations
+
+The main effect of [[#3-forms-not-meant-for-evaluation-are-not-namespaced][item 3]] is that the usual way of writing
+=defalias= and =defvaralias= won't be namespaced. That is 
+#+begin_src emacs-lisp
+(define-namespace test-
+(defalias 'yell #'message)
+)
+;; simply expands to this
+(defalias 'yell #'message)
+;; instead of this
+(defalias 'test-yell #'message)
+#+end_src
+
+This is not considered a bug. The =SYMBOL= argument of a defalias
+could just as well be an arbitrary form whose value isn't even defined
+until runtime. Therefore, there is no consistent way of handling a
+defalias, and we choose to just treat it as any other function call. 
+
+Just remember to add the namespace in your defalias and defvaralias forms.
 
 *** Case-by-case Examples
 In general, =define-namespace= should work as you expect it to. But if you
