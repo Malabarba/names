@@ -738,13 +738,12 @@ list."
   "Special treatment for `quote' FORM.
 When FORM is (quote argument), argument is parsed for namespacing
 only if it is a lambda form.
-
 Anything else (a symbol or a general list) is too arbitrary to
 be logically namespaced and will be preserved as-is.
 
-Note, however, that the value of the NAME argument of a
-\"definition-type\" forms is ALWAYS namespaced, regardless of
-whether the form was a quote."
+When FORM is (function form), a symbol is namespaced as a
+function name. A lambda form or a general list is treated the
+same as above."
   (let ((kadr (cadr form))
         func)
     (if (eq (car-safe kadr) 'lambda)
