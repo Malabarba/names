@@ -67,7 +67,7 @@ correctly."
 
 (defvar names-font-lock
   '(("^:autoload\\_>" 0 'font-lock-warning-face prepend)
-    ("(\\(\\_<defspace\\_>\\)[\t \n]+\\([^\t \n]+\\)"
+    ("(\\(\\_<define-namespace\\_>\\)[\t \n]+\\([^\t \n]+\\)"
      (1 'font-lock-keyword-face)
      (2 'font-lock-variable-name-face))))
 
@@ -80,6 +80,8 @@ correctly."
   "Identical to `eval-defun', except it works for forms inside namespaces.
 Argument EDEBUG-IT is the same as `eval-defun'."
   (interactive "P")
+  (require 'font-lock) ; just in case
+  ;; Get the namespace, if we're in one.
   (let ((body
          (save-excursion
            (when (progn
@@ -91,8 +93,10 @@ Argument EDEBUG-IT is the same as `eval-defun'."
                      (error nil)))
              (cdr (read (current-buffer))))))
         form b keylist spec)
+    ;; If we're not in a namespace, call the regular `eval-defun'.
     (if (null body)
         (eval-defun edebug-it)
+      ;; If we are, expand the function in a temp buffer
       (setq name (pop body))
       (while (setq spec (names--next-keyword body))
         (setq keylist
@@ -102,12 +106,20 @@ Argument EDEBUG-IT is the same as `eval-defun'."
               (end-of-defun)
               (beginning-of-defun)
               (read (current-buffer))))
-      (setq b (names--generate-new-buffer form))
+      ;; Prepare the (possibly) temporary buffer.
+      (setq b (names--generate-new-buffer name form))
       (with-current-buffer b
-        (pp
-         (macroexpand
-          `(define-namespace ,name :global ,@keylist ,form))
-         (current-buffer)))
+        (erase-buffer)
+        (emacs-lisp-mode)
+        (save-excursion
+          ;; Print everything inside the `progn'.
+          (mapcar 
+           (lambda (it) (pp it (current-buffer)))
+           (cdr (macroexpand
+                 `(define-namespace ,name :global ,@keylist ,form)))))
+        (font-lock-ensure)
+        (eval-defun edebug-it))
+      ;; Kill it if we won't need it.
       (unless edebug-it
         (kill-buffer b)))))
 
@@ -120,17 +132,21 @@ Argument EDEBUG-IT is the same as `eval-defun'."
         (equal (symbol-function (intern (thing-at-point 'symbol)))
                (symbol-function 'define-namespace))))))
 
-(defun names--generate-new-buffer (&optional form)
+(defun names--generate-new-buffer (name &optional form)
   "Generate and return a new buffer.
-If FORM is provided, try to use it to decide an informative
+NAME is current namespace name.
+If FORM is provided, also try to use it to decide an informative
 buffer name."
-  (generate-new-buffer
+  (get-buffer-create
    (concat
-    " *names"
-    (if form " " "")
-    (if (and form (listp form)) (format "%s" (car form)) "")
-    (if (and form (listp form)) (format "%s" (or (car (cdr form)) "")) "")
+    " *names "
+    (format "%s %s" 
+            (or (car-safe form) (random 10000))
+            (or (car-safe (cdr-safe form)) (random 10000)))
     "*")))
+
+(eval-after-load 'lisp-mode
+  '(define-key emacs-lisp-mode-map [remap eval-defun] #'names-eval-defun))
 
 (provide 'names-dev)
 ;;; names-dev.el ends here.

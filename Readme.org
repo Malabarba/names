@@ -12,8 +12,10 @@ The *Names* package aims to provide an implementation of
 namespaces in Emacs with two guiding principles:
 
 - Completeness :: It should support any macro/function/special-form
-              available in emacs-lisp. Even the ones defined by you or
-              a third party.
+                  available in emacs-lisp. Even the ones defined by
+                  you or a third party. It also supports *edebug* and
+                  =eval-defun=, which are essential tools for any
+                  package developer.
 - Robustness :: No-surprises, well-tested, and with clearly stated
             limitations. Yes, as complete as we aim to be,
             there will be limitations.
@@ -109,6 +111,36 @@ knowns that =foo-infinite= is not a variable.
 In general, =define-namespace= should work as you expect it to. But if you
 need to understand why something is or isn't being namespaced, have a
 look at [[https://github.com/Bruce-Connor/emacs-lisp-namespaces/blob/master/TheNittyGritty.org][TheNittyGritty.org]]
+
+** Developer Tools
+*Names* offers a series of tools to make package writing more
+convenient inside a namespace. These developer facilities are on this
+separate file, so the file isn't loaded on the user's computer when
+your package calls =(require 'names)=.
+
+To access them add the following line to your init file.
+#+begin_src emacs-lisp
+(require 'names-dev)
+#+end_src
+
+*** Edebug and eval-defun support
+
+First and foremost, the =edebug-eval-defun= command (bound to =C-u
+C-M-x=) is an essential tool for any package developer. *Names*
+wouldn't be a very useful utility if it prevented you from using this
+asset. 
+
+Therefore, it provides the =names-eval-defun= command, which is
+identical to =edebug-eval-defun= except it also works inside
+namespaces. It will automatically be added to your
+=emacs-lisp-mode-map=.
+
+*** Font-locking 
+Font-lock for =define-namespace= and =:autoload=.
+
+*** Expansion and comparison functions
+=names-compare-forms= and =names-print= offer information when
+something just doesn't seem to make sense.
 
 ** Keywords - Customizing the behaviour
 Immediately after the name of your space you may add keywords which
