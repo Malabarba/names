@@ -137,8 +137,23 @@ namespace.")
   `(when (boundp ',var)
      (remove
       nil
-      (mapcar (lambda (x) (when (funcall ,pred (or (car-safe x) x))
-                       (or (car-safe x) x))) ,var))))
+      (mapcar (lambda (x) (when (funcall (or ,pred 'identity) (or (car-safe x) x))
+			    (or (car-safe x) x)))
+	      ,var))))
+
+(defmacro names--next-keyword (body)
+  "If car of BODY is a known keyword, `pop' it (and its arguments) from body.
+Returns a list (KEYWORD . ARGUMENTLIST)."
+  (declare (debug sexp))
+  `(let ((kar (car-safe ,body))
+         out n)
+     (and kar
+          (keywordp kar)
+          (setq n (assoc kar names--keyword-list))
+          (setq n (cadr n))
+          (dotimes (it (1+ n) out)
+            (push (pop ,body) out))
+          (nreverse out))))
 
 
 ;;; ---------------------------------------------------------------
@@ -233,20 +248,6 @@ http://github.com/Bruce-Connor/names
                                  (names--extract-autoloads body)
                                body))))
     (mapc (lambda (x) (set x nil)) names--var-list)))
-
-(defmacro names--next-keyword (body)
-  "If car of BODY is a known keyword, `pop' it (and its arguments) from body.
-Returns a list (KEYWORD . ARGUMENTLIST)."
-  (declare (debug sexp))
-  `(let ((kar (car-safe ,body))
-         out n)
-     (and kar
-          (keywordp kar)
-          (setq n (assoc kar names--keyword-list))
-          (setq n (cadr n))
-          (dotimes (it (1+ n) out)
-            (push (pop ,body) out))
-          (nreverse out))))
 
 (defun names--extract-autoloads (body)
   "Return a list of the forms in BODY preceded by :autoload."
