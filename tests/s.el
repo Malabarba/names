@@ -1,3 +1,9 @@
+;;; IMPORTANT!!!
+
+;; The following file is meant for testing, not usage! It has been
+;; heavily modified, so the original author should not be blaimed (or
+;; even bothered) by any bug that happens to be in this version.
+
 ;;; s.el --- The long lost Emacs string manipulation library.
 
 ;; Copyright (C) 2012 Magnar Sveen

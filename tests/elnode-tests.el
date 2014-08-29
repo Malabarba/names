@@ -2,6 +2,8 @@
 
 ;;; Code:
 
+(add-to-list 'load-path (expand-file-name "./elnode/"))
+
 (require 'ert)
 (require 'fakir)
 (require 'elnode)

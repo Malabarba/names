@@ -1,3 +1,9 @@
+;;; IMPORTANT!!!
+
+;; The following file is meant for testing, not usage! It has been
+;; heavily modified, so the original author should not be blaimed (or
+;; even bothered) by any bug that happens to be in this version.
+
 ;;; dash.el --- A modern list library for Emacs
 
 ;; Copyright (C) 2012 Magnar Sveen
@@ -212,8 +218,8 @@ associates from right instead of from left."
 Alias: `-select'"
   (-filter (funcall pred it) list))
 
-(defalias 'select 'filter)
-(defalias '-select '-filter)
+(defalias '-select #'filter)
+(defalias '--select #'-filter)
 
 (defmacro -remove (form list)
   "Anaphoric form of `-remove'."
@@ -226,8 +232,8 @@ Alias: `-select'"
 Alias: `-reject'"
   (-remove (funcall pred it) list))
 
-(defalias 'reject 'remove)
-(defalias '-reject '-remove)
+(defalias '-reject #'remove)
+(defalias '--reject #'-remove)
 
 (defmacro -keep (form list)
   "Anaphoric form of `-keep'."
@@ -275,8 +281,8 @@ Alias: `-replace-where'
 See also: `-update-at'"
   (-map-when (funcall pred it) (funcall rep it) list))
 
-(defalias 'replace-where 'map-when)
-(defalias '-replace-where '-map-when)
+(defalias '-replace-where #'map-when)
+(defalias '--replace-where #'-map-when)
 
 (defun replace (old new list)
   "Replace all OLD items in LIST with NEW.
@@ -314,7 +320,7 @@ See also: `-flatten'"
 Thus function FN should return a list."
   (-mapcat (funcall fn it) list))
 
-(defalias 'copy 'copy-sequence
+(defalias '-copy #'copy-sequence
   "Create a shallow copy of LIST.")
 
 (defun splice (pred fun list)
@@ -382,8 +388,8 @@ To get the first item in the list no questions asked, use `car'.
 Alias: `-find'"
   (-first (funcall pred it) list))
 
-(defalias 'find 'first)
-(defalias '-find '-first)
+(defalias '-find #'first)
+(defalias '--find #'-first)
 
 (defmacro -last (form list)
   "Anaphoric form of `-last'."
@@ -398,7 +404,7 @@ Alias: `-find'"
   "Return the last x in LIST where (PRED x) is non-nil, else nil."
   (-last (funcall pred it) list))
 
-(defalias 'first-item 'car
+(defalias '-first-item #'car
   "Return the first item of LIST, or nil on an empty list.")
 
 (defun last-item (list)
@@ -439,12 +445,12 @@ Alias: `-find'"
 Alias: `-any-p', `-some?', `-some-p'"
   (-any? (funcall pred it) list))
 
-(defalias 'some? 'any?)
-(defalias '-some? '-any?)
-(defalias 'any-p 'any?)
-(defalias '-any-p '-any?)
-(defalias 'some-p 'any?)
-(defalias '-some-p '-any?)
+(defalias '-some? #'any?)
+(defalias '--some? #'-any?)
+(defalias '-any-p #'any?)
+(defalias '--any-p #'-any?)
+(defalias '-some-p #'any?)
+(defalias '--some-p #'-any?)
 
 (defmacro -all? (form list)
   "Anaphoric form of `-all?'."
@@ -460,12 +466,12 @@ Alias: `-any-p', `-some?', `-some-p'"
 Alias: `-all-p', `-every?', `-every-p'"
   (-all? (funcall pred it) list))
 
-(defalias 'every? 'all?)
-(defalias '-every? '-all?)
-(defalias 'all-p 'all?)
-(defalias '-all-p '-all?)
-(defalias 'every-p 'all?)
-(defalias '-every-p '-all?)
+(defalias '-every? #'all?)
+(defalias '--every? #'-all?)
+(defalias '-all-p #'all?)
+(defalias '--all-p #'-all?)
+(defalias '-every-p #'all?)
+(defalias '--every-p #'-all?)
 
 (defmacro -none? (form list)
   "Anaphoric form of `-none?'."
@@ -478,8 +484,8 @@ Alias: `-all-p', `-every?', `-every-p'"
 Alias: `-none-p'"
   (-none? (funcall pred it) list))
 
-(defalias 'none-p 'none?)
-(defalias '-none-p '-none?)
+(defalias '-none-p #'none?)
+(defalias '--none-p #'-none?)
 
 (defmacro -only-some? (form list)
   "Anaphoric form of `-only-some?'."
@@ -498,8 +504,8 @@ Return `nil` both if all items match the predicate or if none of the items match
 Alias: `-only-some-p'"
   (-only-some? (funcall pred it) list))
 
-(defalias 'only-some-p 'only-some?)
-(defalias '-only-some-p '-only-some?)
+(defalias '-only-some-p #'only-some?)
+(defalias '--only-some-p #'-only-some?)
 
 (defun slice (list from &optional to step)
   "Return copy of LIST, starting from index FROM to index TO.
@@ -536,7 +542,7 @@ section is returned.  Defaults to 1."
         (!cdr list)))
     (nreverse result)))
 
-(defalias 'drop 'nthcdr "Return the tail of LIST without the first N items.")
+(defalias '-drop #'nthcdr "Return the tail of LIST without the first N items.")
 
 (defmacro -take-while (form list)
   "Anaphoric form of `-take-while'."
@@ -1183,7 +1189,7 @@ Alias: `-uniq'"
     (-each list (unless (contains? result it) (!cons it result)))
     (nreverse result)))
 
-(defalias 'uniq 'distinct)
+(defalias '-uniq #'distinct)
 
 (defun union (list list2)
   "Return a new list containing the elements of LIST1 and elements of LIST2 that are not in LIST1.
@@ -1232,7 +1238,7 @@ Alias: `-contains-p'"
           (setq lst (cdr lst)))
         lst))))))
 
-(defalias 'contains-p 'contains?)
+(defalias '-contains-p #'contains?)
 
 (defun same-items? (list list2)
   "Return true if LIST and LIST2 has the same items.
@@ -1246,7 +1252,7 @@ Alias: `-same-items-p'"
      (= length-a length-b)
      (= length-a (length (intersection list list2))))))
 
-(defalias 'same-items-p 'same-items?)
+(defalias '-same-items-p #'same-items?)
 
 (defun is-prefix? (prefix list)
   "Return non-nil if PREFIX is prefix of LIST.
@@ -1274,9 +1280,9 @@ Alias: `-is-infix-p'"
       (!cdr list))
     done))
 
-(defalias 'is-prefix-p 'is-prefix?)
-(defalias 'is-suffix-p 'is-suffix?)
-(defalias 'is-infix-p 'is-infix?)
+(defalias '-is-prefix-p #'is-prefix?)
+(defalias '-is-suffix-p #'is-suffix?)
+(defalias '-is-infix-p #'is-infix?)
 
 (defun sort (comparator list)
   "Sort LIST, stably, comparing elements using COMPARATOR.

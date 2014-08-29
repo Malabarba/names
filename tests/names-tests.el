@@ -1,4 +1,4 @@
-(require 'ert)
+(require 'names)
 
 (defmacro names-deftest (name doc &rest body)
   "Test if (namespace NAME FORMS-A) is the same as FORM-B."

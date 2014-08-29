@@ -1,3 +1,9 @@
+;;; IMPORTANT!!!
+
+;; The following file is meant for testing, not usage! It has been
+;; heavily modified, so the original author should not be blaimed (or
+;; even bothered) by any bug that happens to be in this version.
+
 ;;; elnode.el --- a simple emacs async HTTP server -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2010, 2011, 2012  Nic Ferrier

@@ -1,5 +1,5 @@
 (progn
-  (add-to-list 'load-path (expand-file-name "./elnode/"))
+  (byte-compile-file (expand-file-name "../names.el"))
   (add-to-list 'load-path (expand-file-name "../"))
   (add-to-list 'load-path (expand-file-name "./"))
   (require 'ert)
