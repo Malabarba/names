@@ -663,6 +663,28 @@ behaviour.")
       (cons spaced-name (cddr form))))))
 (defalias 'names--convert-defmacro* 'names--convert-defmacro)
 
+(defun names--convert-defvaralias (form)
+  "Special treatment for `defvaralias' FORM."
+  (let ((form (cons (car form)
+                    (mapcar #'names-convert-form (cdr form))))
+        (name))
+    (setq name (names--remove-namespace
+                (ignore-errors (eval (cadr form)))))
+    (when name
+      (add-to-list 'names--bound name))
+    form))
+
+(defun names--convert-defalias (form)
+  "Special treatment for `defalias' FORM."
+  (let ((form (cons (car form)
+                    (mapcar #'names-convert-form (cdr form))))
+        (name))
+    (setq name (names--remove-namespace
+                (ignore-errors (eval (cadr form)))))
+    (when name
+      (add-to-list 'names--fbound name))
+    form))
+
 (defun names--convert-defvar (form &optional dont-add)
   "Special treatment for `defvar' FORM."
   (let ((name (cadr form)))
