@@ -325,6 +325,10 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
   "Generic handling for the form (FUNC . ARGS), without namespacing FUNC."
   (if (memq func names--ignored-forms)
       (cons func args)
+    ;; TODO: Fix this logic before release.
+    ;; This is a terrible way of handling the function choosing. We
+    ;; intern tons of symbols which are never used, not to mention
+    ;; it's slow. Just change it to an alist or a hash-table.
     (let ((handler (intern (format "names--convert-%s" func))))
       ;; Some function-like forms get special handling.
       ;; That's anything with a names--convert-%s function defined.
