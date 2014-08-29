@@ -463,6 +463,7 @@ phenomenally. So we hack into edebug instead."
           (unwind-protect
               (progn
                 (names--override-definition 'message 'names--edebug-message)
+                (names--override-definition 'cl-gensym 'names--gensym)
                 (names--override-definition 'edebug-form 'names--edebug-form)
                 (names--override-definition 'edebug-make-enter-wrapper 'names--edebug-make-enter-wrapper)
                 (edebug-read-top-level-form))
@@ -505,12 +506,16 @@ The original definition is saved to names--SYM-backup."
   (setq edebug-def-name
         (or edebug-def-name
             edebug-old-def-name
-            (let ((pfix "names-edebug-anon")
-                  (num (prog1 names--gensym-counter
-                         (setq names--gensym-counter
-                               (1+ names--gensym-counter)))))
-              (make-symbol (format "%s%d" pfix num)))))
+            (names--gensym "edebug-anon")))
   (cons 'progn forms))
+
+(defun names--gensym (pfix)
+  "Generate a new uninterned symbol.
+The name is made by appending a number to PREFIX and preppending \"names\", default \"G\"."
+  (let ((num (prog1 names--gensym-counter
+               (setq names--gensym-counter
+                     (1+ names--gensym-counter)))))
+    (make-symbol (format "names-%s%d" (if (stringp pfix) pfix "G") num))))
 
 (defun names--edebug-form (cursor)
   "Parse form given by CURSOR using edebug, and namespace it if necessary."
@@ -650,7 +655,6 @@ behaviour.")
                                       (nth 4 form))
                                      (t nil))))
       (setq decl (car (cdr-safe (assoc 'debug (cdr decl)))))
-      (message "declaration: %s" decl)
       (when decl (put spaced-name 'edebug-form-spec decl)))
     ;; Then convert the macro as a defalias.
     (cons
