@@ -5,7 +5,7 @@
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
 ;; Version: 0.5
-;; Package-Requires: ((emacs "24.1"))
+;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords:
 ;; Prefix: names
 ;; Separator: -
@@ -457,6 +457,7 @@ it matches (cdr FORM), but that would take a lot of work and
 we'd be reimplementing something that edebug already does
 phenomenally. So we hack into edebug instead."
   (require 'edebug)
+  (require 'cl-lib)
   (condition-case nil
       (with-temp-buffer
         (pp form 'insert)
@@ -464,41 +465,20 @@ phenomenally. So we hack into edebug instead."
         (let ((edebug-all-forms t)
               (edebug-all-defs t)
               (names--is-inside-macro form))
-          (unwind-protect
-              (progn
-                (names--override-definition 'message 'names--edebug-message)
-                (names--override-definition 'cl-gensym 'names--gensym)
-                (names--override-definition 'edebug-form 'names--edebug-form)
-                (names--override-definition 'edebug-make-enter-wrapper 'names--edebug-make-enter-wrapper)
-                (edebug-read-top-level-form))
-            (names--restore-edebug-backups))))
+          (cl-letf
+              (((symbol-function 'message) #'names--edebug-message)
+               ((symbol-function 'cl-gensym) #'names--gensym)
+               ((symbol-function 'edebug-form) #'names--edebug-form)
+               ((symbol-function 'edebug-make-enter-wrapper) 
+                #'names--edebug-make-enter-wrapper))
+            (edebug-read-top-level-form))))
     (invalid-read-syntax
-     (names--warn "Couldn't namespace this macro using its (debug ...) declaration: %s"
-                  form)
+     (names--warn
+      "Couldn't namespace this macro using its (debug ...) declaration: %s"
+      form)
      form)))
 
-(defvar names--edebug-backups nil)
-
-(defun names--restore-edebug-backups ()
-  "Disable overridings we used for hacking into edebug."
-  (dolist (it names--edebug-backups)
-    (names--message "Restoring %s to %s" (car it) (eval (cdr it)))
-    (fset (car it) (eval (cdr it))))
-  (setq names--edebug-backups nil))
-
-(defun names--override-definition (sym newdef)
-  "Temporarily override SYM's function definition with NEWDEF.
-The original definition is saved to names--SYM-backup."
-  (let ((backup-name (intern (format "names--%s-backup" sym)))
-        (def (symbol-function sym)))
-    (unless (assoc sym names--edebug-backups)
-      (names--message "Overriding %s with %s" sym newdef)
-      (eval (list 'defvar backup-name nil))
-      (add-to-list 'names--edebug-backups (cons sym backup-name))
-      (set backup-name def)
-      (fset sym newdef))))
-
-(defvar names--message-backup nil 
+(defvar names--message-backup (symbol-function 'message)
   "Where names stores `message's definition while overriding it.")
 
 (defun names--edebug-message (&rest _)
