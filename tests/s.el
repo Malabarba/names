@@ -213,7 +213,7 @@ Alias: `s-suffix?'"
          (eq t (compare-strings suffix nil nil
                                 s start-pos nil ignore-case)))))
 
-(defalias 'ends-with-p 's-ends-with?)
+(defalias 's-ends-with-p #'ends-with?)
 
 (defun starts-with? (prefix s &optional ignore-case)
   "Does S start with PREFIX?
@@ -225,12 +225,12 @@ Alias: `s-prefix?'. This is a simple wrapper around the built-in
 `string-prefix-p'."
   (string-prefix-p prefix s ignore-case))
 
-(defalias 'starts-with-p 's-starts-with?)
+(defalias 's-starts-with-p #'starts-with?)
 
-(defalias 'suffix? 's-ends-with?)
-(defalias 'prefix? 's-starts-with?)
-(defalias 'suffix-p 's-ends-with?)
-(defalias 'prefix-p 's-starts-with?)
+(defalias 's-suffix? #'ends-with?)
+(defalias 's-prefix? #'starts-with?)
+(defalias 's-suffix-p #'ends-with?)
+(defalias 's-prefix-p #'starts-with?)
 
 (defun -truthy? (val)
   (not (null val)))
@@ -243,7 +243,7 @@ attention to case differences."
   (let ((case-fold-search ignore-case))
     (-truthy? (string-match-p (regexp-quote needle) s))))
 
-(defalias 'contains-p 's-contains?)
+(defalias 's-contains-p #'contains?)
 
 (defun equals? (s1 s2)
   "Is S1 equal to S2?
@@ -251,7 +251,7 @@ attention to case differences."
 This is a simple wrapper around the built-in `string-equal'."
   (string-equal s1 s2))
 
-(defalias 'equals-p 's-equals?)
+(defalias 's-equals-p #'equals?)
 
 (defun less? (s1 s2)
   "Is S1 less than S2?
@@ -259,7 +259,7 @@ This is a simple wrapper around the built-in `string-equal'."
 This is a simple wrapper around the built-in `string-lessp'."
   (string-lessp s1 s2))
 
-(defalias 'less-p 's-less?)
+(defalias 's-less-p #'less?)
 
 (defun matches? (regexp s &optional start)
   "Does REGEXP match S?
@@ -268,7 +268,7 @@ If START is non-nil the search starts at that index.
 This is a simple wrapper around the built-in `string-match-p'."
   (-truthy? (string-match-p regexp s start)))
 
-(defalias 'matches-p 's-matches?)
+(defalias 's-matches-p #'matches?)
 
 (defun blank? (s)
   "Is S nil or the empty string?"

@@ -300,12 +300,6 @@ See also: `-flatten-n'"
       (mapcat '-flatten l)
     (::list l)))
 
-(defun flatten-n (num list)
-  "Flatten NUM levels of a nested LIST.
-
-See also: `-flatten'"
-  (last-item (-iterate (-mapcat (list it) it) list (1+ num))))
-
 (defun concat (&rest lists)
   "Return a new list with the concatenation of the elements in the supplied LISTS."
   (apply 'append lists))
@@ -581,7 +575,7 @@ section is returned.  Defaults to 1."
 (defun rotate (n list)
   "Rotate LIST N places to the right.  With N negative, rotate to the left.
 The time complexity is O(n)."
-  (if (> n 0)
+  (if (::> n 0)
       (append (::last list n) (::butlast list n))
     (append (drop (- n) list) (take (- n) list))))
 
@@ -1065,7 +1059,7 @@ second item in second form, etc."
    ((null form) x)
    ((null more) (if (listp form)
                     `(,(car form) ,x ,@(cdr form))
-                  (::list form x)))
+                  (list form x)))
    (:else `(-> (-> ,x ,form) ,@more))))
 
 (defmacro >> (x form &rest more)

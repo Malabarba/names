@@ -95,21 +95,21 @@
   ((defvar foo0 1)
    (defvar foo1 1)
    (defvaralias 'foo0 'foo1)
-   (defvaralias #'foo0 #'foo1))
+   (defvaralias #'foo2 #'foo3))
   ((defvar a-foo0 1)
    (defvar a-foo1 1)
    (defvaralias 'foo0 'foo1)
-   (defvaralias #'foo0 #'foo1))
+   (defvaralias #'foo2 #'foo3))
   ;; And the keyword
   (:assume-var-quote
    (defun foo0 () 1)
    (defcustom foo1 1 "")
    (defvaralias 'foo0 'foo1)
-   (defvaralias #'a-foo0 #'foo1))
+   (defvaralias 'a-foo2 #'foo1))
   ((defun a-foo0 () 1)
    (defcustom a-foo1 1 "")
    (defvaralias 'foo0 'a-foo1)
-   (defvaralias #'a-foo0 #'foo1)))
+   (defvaralias 'a-foo2 #'foo1)))
 
 (names-deftest let-vars
   "Test letbound variables."
@@ -151,4 +151,65 @@
   (:global
    (defun foo () (let ((c bio)) (baz))))
   ((defun a-foo () (let ((c a-bio)) (a-baz)))))
+
+(unless (fboundp 'string-prefix-p)
+  (defun stringp-prefix-p (x y)
+    ""
+    (string-match (concat "\\`" x) y)))
+
+(add-to-list 'load-path (expand-file-name "./elnode/"))
+
+(ert-deftest no-leftover-edebug ()
+  "Test no edebug leftover in function definitions."
+  (dolist (lib '((dash . "-")
+                 (s . "s-")
+                 (elnode . "elnode/")))
+    (require (car lib))
+    (should
+     (equal (loop for x being the symbols
+                  if (fboundp x)
+                  if (string-prefix-p (cdr lib) (symbol-name x))
+                  if (names--find-edebug-traces x)
+                  collect x)
+            nil))))
+
+(defun names--find-edebug-traces (sym)
+  ""
+  (let* ((fun (indirect-function sym))
+         (symbol-vec))
+    (when (macrop fun)
+      (setq fun (cdr fun)))
+    (condition-case er
+        (cond
+         ((subrp fun) nil)
+         ((listp fun)
+          (deep-search-debug fun))
+         ((vectorp fun)
+          (setq symbol-vec
+                (aref (or (cdr-safe fun) fun) 2))
+          (append
+           (remove-if
+            (lambda (x) (or (null (symbolp x))
+                       (null (string-prefix-p "edebug-" (symbol-name sym)))))
+            symbol-vec)
+           nil)))
+      (error
+       (error "Symbol: %s\nFunction: %s\nError: %s"
+              sym fun er)))))
+
+(defun deep-search-debug (x)
+  "Look for symbols starting with \"edebug-\"."
+  (when x
+    (cond
+     ((consp x)
+      (or (deep-search-debug (car x))
+          (deep-search-debug (cdr x)))
+      ;; (apply 'append
+      ;;        (mapcar #'deep-search-debug x))
+      )
+     ((symbolp x)
+      (when (string-prefix-p "edebug-" (symbol-name x))
+        x))
+     (t nil))))
+
 

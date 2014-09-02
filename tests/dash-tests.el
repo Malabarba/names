@@ -1,8 +1,12 @@
 ;; -*- lexical-binding: t -*-
 
-
 (byte-compile-file "dash.el")
 (require 'dash)
+
+;; (macroexpand '(--mapcat (apply 'append (--map (list it) it))
+;;                         ;; (list it)
+;;                         ;; it
+;;                         ))
 
 (defun even? (num) (= 0 (% num 2)))
 (defun square (num) (* num num))
