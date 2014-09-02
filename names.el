@@ -739,11 +739,10 @@ list."
       (when (setq keymap (names--remove-namespace keymap))
         (add-to-list 'names--bound keymap)))
     ;; And here we namespace it.
-    (names--macro-args-using-edebug
-     (cons
-      (car form)
-      (cons (names--prepend name)
-            (cddr form))))))
+    (cons
+     (car form)
+     (cons (names--prepend name)
+           (mapcar #'names-convert-form (cddr form))))))
 
 (defun names--convert-quote (form)
   "Special treatment for `quote' FORM.
