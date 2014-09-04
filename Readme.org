@@ -39,7 +39,7 @@ To use this in your package:
 1. Remember to list =names= as a dependency.
 2. Wrap all code that's to be namespaced inside a =(define-namespace NAME ...)= macro.
 3. Pleasantly remove all that redundant repetition from you code!
-4. When quoting function names, use #' instead of '.
+4. When quoting function names, use =#' = instead of = ' =.
 5. If you have =;;;###autoload= comments inside your =define-namespace=:
    1. Replace them with =:autoload= keywords
    2. Add an =;;;###autoload= tag immediately above your =define-namespace=.
