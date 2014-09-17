@@ -76,6 +76,7 @@ if it's an autoloaded macro."
       (when (consp def)
         (or (eq 'macro (car def))
             (and (autoloadp def) (memq (nth 4 def) '(macro t))))))))
+(declare-function 'macrop "names")
 
 (unless (fboundp 'autoloadp)
   (defsubst autoloadp (object)
@@ -124,6 +125,47 @@ namespace.")
 
 (defvar names--inside-make-autoload nil 
   "Used in `make-autoload' to indicate to `define-namespace' that we're generating autoloads.")
+
+(defconst names--keyword-list
+  '((:protection
+     1 
+     (lambda (x) 
+       (let ((val (symbol-name x)))
+         (setq names--protection
+               (format "\\`%s" (regexp-quote val)))))
+     "Change the value of the `names--protection' variable.")
+
+    (:let-vars
+     0 nil
+     "Indicates variables assigned in let-bind are candidates for namespacing.")
+
+    (:verbose
+     0 nil
+     "Cause a message to be called on each special form.")
+
+    (:global
+     0 nil
+     "Accept namespaced names from outside current namespace definition.")
+
+    (:assume-var-quote
+     0 nil
+     "Indicate symbols quoted with `quote' should be considered variable names.")
+
+    (:dont-assume-function-quote
+     0 nil
+     "Indicate symbols quoted with `function' should NOT be considered function names."))
+  "List of keywords used by `define-namespace'.
+Each element is a list containing
+    (KEYWORD N DEFINITION DOCUMENTATION)
+where:
+
+- KEYWORD is the keyword's name, a symbol satifying `keywordp'.
+- N is the number of arguments it takes, an integer.
+- DEFINITION is a function (symbol or lambda) that takes N
+arguments and does whatever you need for implementing the
+keyword.
+- DOCUMENTATION is a string explaining the keyword's
+behaviour.")
 
 (defmacro names--prepend (sbl)
   "Return namespace+SBL."
@@ -573,41 +615,6 @@ the keyword arguments, if any."
     (if (functionp func)
         (apply func (cdr body))
       nil)))
-
-(defconst names--keyword-list
-  '((:protection 1 
-     (lambda (x) 
-       (let ((val (symbol-name x)))
-         (setq names--protection
-               (format "\\`%s" (regexp-quote val)))))
-     "Change the value of the `names--protection' variable.")
-
-    (:let-vars 0 nil
-     "Indicates variables assigned in let-bind are candidates for namespacing.")
-
-    (:verbose 0 nil
-     "Cause a message to be called on each special form.")
-
-    (:global 0 nil
-     "Accept namespaced names from outside current namespace definition.")
-
-    (:assume-var-quote 0 nil
-     "Indicate symbols quoted with `quote' should be considered variable names.")
-
-    (:dont-assume-function-quote 0 nil
-     "Indicate symbols quoted with `function' should NOT be considered function names."))
-  "List of keywords used by `define-namespace'.
-Each element is a list containing
-    (KEYWORD N DEFINITION DOCUMENTATION)
-where:
-
-- KEYWORD is the keyword's name, a symbol satifying `keywordp'.
-- N is the number of arguments it takes, an integer.
-- DEFINITION is a function (symbol or lambda) that takes N
-arguments and does whatever you need for implementing the
-keyword.
-- DOCUMENTATION is a string explaining the keyword's
-behaviour.")
 
 
 ;;; ---------------------------------------------------------------
