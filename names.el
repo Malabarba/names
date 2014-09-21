@@ -753,23 +753,23 @@ list."
 
 (defun names--convert-quote (form)
   "Special treatment for `quote' FORM.
-When FORM is (quote argument), argument is parsed for namespacing
-only if it is a lambda form.
-Anything else (a symbol or a general list) is too arbitrary to
-be logically namespaced and will be preserved as-is.
+When FORM is (quote argument), argument too arbitrary to be
+logically namespaced and is never parsed for namespacing
+(but see :assume-var-quote in `names--keyword-list').
 
 When FORM is (function form), a symbol is namespaced as a
-function name. A lambda form or a general list is treated the
-same as above."
+function name, a list is namespaced as a lambda form."
   (let ((kadr (cadr form))
+        (this-name (car form))
         func)
-    (if (eq (car-safe kadr) 'lambda)
-        (list (car form) (names-convert-form kadr))
+    (if (and (eq this-name 'function)
+             (listp kadr))
+        (list this-name (names-convert-form kadr))
       (if (symbolp kadr)
           (cond
            ;; A symbol inside a function quote should be a function,
            ;; unless the user disabled that.
-           ((and (eq (car form) 'function)
+           ((and (eq this-name 'function)
                  (null (names--keyword :dont-assume-function-quote)))
             (list 'function
                   (or (names--remove-protection kadr)
@@ -779,7 +779,7 @@ same as above."
            
            ;; A symbol inside a regular quote should be a function, if
            ;; the user asked for that.
-           ((and (eq (car form) 'quote)
+           ((and (eq this-name 'quote)
                  (names--keyword :assume-var-quote))
             (list 'quote
                   (or (names--remove-protection kadr)
