@@ -3,3 +3,8 @@
 \#*#
 /tests/junk.el
 /la.el
+/dt.el
+/ex.el
+/ex2.el
+/tests/flycheck/
+/tests/out.tex
