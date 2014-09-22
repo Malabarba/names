@@ -792,6 +792,11 @@ function name, a list is namespaced as a lambda form."
 
 (defalias 'names--convert-function 'names--convert-quote)
 
+(defun names--convert-macro (form)
+  "Special treatment for `macro' form.
+Return (macro . (names-convert-form (cdr FORM)))."
+  (cons 'macro (names-convert-form (cdr form))))
+
 (defun names--convert-lambda (form)
   "Special treatment for `lambda' FORM."
   (let ((names--local-vars
@@ -813,6 +818,17 @@ function name, a list is namespaced as a lambda form."
      (progn
        ;; (message "%S" forms)
        (mapcar 'names-convert-form forms)))))
+
+(defun names--convert-clojure (form)
+  "Special treatment for `clojure' FORM."
+  (names--warn "Found a `closure'! You should use `lambda's instead")
+  (let ((names--local-vars
+         (append (names--vars-from-arglist (cadr form))
+                 names--local-vars))
+        (forms (cdr (cdr form))))
+    (cons
+     (car form)
+     (names--convert-lambda (cdr form)))))
 
 (defun names--vars-from-arglist (args)
   "Get a list of local variables from a generalized arglist ARGS."
