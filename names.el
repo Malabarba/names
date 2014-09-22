@@ -837,8 +837,9 @@ Return (macro . (names-convert-form (cdr FORM)))."
    (mapcar
     (lambda (x)
       (let ((symb (or (cdr-safe (car-safe x)) (car-safe x) x)))
-        (when (and (symbolp symb) 
-                   (null (string-match "^&" (symbol-name symb))))
+        (when (and (symbolp symb)
+                   (null (string-match "^&" (symbol-name symb)))
+                   (null (eq symb t)))
           symb)))
     args)))
 
