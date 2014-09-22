@@ -822,7 +822,7 @@ function name, a list is namespaced as a lambda form."
     (lambda (x)
       (let ((symb (or (cdr-safe (car-safe x)) (car-safe x) x)))
         (when (and (symbolp symb) 
-                   (string-match "^&" (symbol-name symb)))
+                   (null (string-match "^&" (symbol-name symb))))
           symb)))
     args)))
 
