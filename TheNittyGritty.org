@@ -24,14 +24,11 @@ expands to
    '(not a lambda (infinite x))))
 #+end_src
 
-Note that ='(lambda ...)= is bad practice in Emacs, you should use
+Note that = '(lambda ...)= is bad practice in Emacs, you should use
 =(lambda ...)= instead (which is also namespaced just fine).
 
 ** Symbols Quoted with Quote
-A symbol quoted with =quote= (or ') is 
-1. namespaced as a function if it's the second argument of a =defalias=
-2. namespaced as a variable if it's the second argument of a =defvaralias=
-3. returned untouched otherwise (customizable).
+A symbol quoted with =quote= (or = ' =) is never namespaced.
 #+begin_src emacs-lisp
 (define-namespace foo-
 (defvar var nil)
@@ -44,17 +41,17 @@ A symbol quoted with =quote= (or ') is
 expands to
 #+begin_src emacs-lisp
 (defvar foo-var nil)
-(defvaralias 'foo-varalias 'foo-var)
+(defvaralias 'varalias 'var)
 (defun foo-fun nil)
-(defalias 'foo-alias 'foo-fun)
+(defalias 'alias 'fun)
 ;;; foo-var is not a function, so:
-(defalias 'foo-otheralias 'var)
+(defalias 'otheralias 'var)
 #+end_src
 
 If you provide the =:assume-var-quote= keyword, quoted symbols will be
-namespaced as variables instead of being returned untouched.
+namespaced as variables instead.
 ** Symbols Quoted with Function
-A symbol quoted with =function= (or #') is assumed to be the name of a
+A symbol quoted with =function= (or =#' =) is assumed to be the name of a
 function, and will be namespaced as such if possible. You may provide
 the =:dont-assume-function-quote= keyword to disable this behaviour,
 =function= will then be treated like =quote=.
@@ -72,6 +69,12 @@ expands to
 (mapcar 'fun somelist)
 (mapcar #'foo-fun somelist)
 #+end_src
+
+** Backticks (quasi-quotes)
+Backticks (or =`=) are handled as you would expect. Lists or simbles
+quoted with a backtick are treated the same as those quoted with
+regular quotes ([[#quoted-lists][see above]]), except anything prefixed by a comma (which
+is effectively not quoted) is namespaced as usual.
 
 ** Local Variables Take Precedence
 Local variables take precedence over namespace variables.
@@ -119,15 +122,18 @@ will expand to
 Macros are handled in a very intelligent manner. 
 
 *Names* needs to know which parts of a macro's arguments are
-evaluatable forms, and which are just arbitrary symbols. This present
+evaluatable forms, and which are just arbitrary symbols. This presents
 a challenge because macro arguments could be absolutely anything.
-Fortunately, macros already provide that information in their =debug=
-declaration.
+Fortunately, (good) macros already provide that information in their
+=debug= declaration.
 
 Thus, *Names* uses the macro's =edebug-spec-list= to find out which
 arguments are evaluatable forms, and namespaces only those. Other
 arguments are left untouched. Usually, this is not something you'll
-need to worry about, it should just do what you expect from it.
+need to worry about, it should just do what you expect from it. 
+
+This is only relevant if you write your own macros. If you do,
+remember to add a debug declaration in them.
 ** Accessing Global Symbols
 If one of your definitions shadows a global definition, you can still
 access it by prefixing it with =::=.
@@ -147,12 +153,5 @@ expands to
 #+end_src
 
 When in doubt feel free to use =::=, it will always get removed (as
-long as it's not inside a quoted list). You may also change this
-prefix to something else with the =:prefix= keyword.
-** Backquotes
-Backquotes, at the moment, are simply returned completely untouched. 
-This is not intended and will be fixed.
-
-For now, just don't remove the namespace prefix from anything inside a
-backquote (even if it's one of the comma forms).
-
+long as it's not inside a =quote=). You may also change this prefix to
+something else with the =:prefix= keyword.
