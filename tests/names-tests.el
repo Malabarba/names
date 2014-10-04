@@ -159,19 +159,20 @@
 
 (add-to-list 'load-path (expand-file-name "./elnode/"))
 
-(ert-deftest no-leftover-edebug ()
-  "Test no edebug leftover in function definitions."
-  (dolist (lib '((dash . "-")
-                 (s . "s-")
-                 (elnode . "elnode/")))
-    (require (car lib))
-    (should
-     (equal (loop for x being the symbols
-                  if (fboundp x)
-                  if (string-prefix-p (cdr lib) (symbol-name x))
-                  if (names--find-edebug-traces x)
-                  collect x)
-            nil))))
+(defun deep-search-debug (x)
+  "Look for symbols starting with \"edebug-\"."
+  (when x
+    (cond
+     ((consp x)
+      (or (deep-search-debug (car x))
+          (deep-search-debug (cdr x)))
+      ;; (apply 'append
+      ;;        (mapcar #'deep-search-debug x))
+      )
+     ((symbolp x)
+      (when (string-prefix-p "edebug-" (symbol-name x))
+        x))
+     (t nil))))
 
 (defun names--find-edebug-traces (sym)
   ""
@@ -190,26 +191,34 @@
           (append
            (remove-if
             (lambda (x) (or (null (symbolp x))
-                       (null (string-prefix-p "edebug-" (symbol-name sym)))))
+                            (null (string-prefix-p "edebug-" (symbol-name sym)))))
             symbol-vec)
            nil)))
       (error
        (error "Symbol: %s\nFunction: %s\nError: %s"
               sym fun er)))))
 
-(defun deep-search-debug (x)
-  "Look for symbols starting with \"edebug-\"."
-  (when x
-    (cond
-     ((consp x)
-      (or (deep-search-debug (car x))
-          (deep-search-debug (cdr x)))
-      ;; (apply 'append
-      ;;        (mapcar #'deep-search-debug x))
-      )
-     ((symbolp x)
-      (when (string-prefix-p "edebug-" (symbol-name x))
-        x))
-     (t nil))))
+(ert-deftest no-leftover-edebug ()
+  "Test no edebug leftover in function definitions."
+  (dolist (lib '((dash . "-")
+                 (s . "s-")
+                 (elnode . "elnode/")))
+    (require (car lib))
+    (should
+     (equal (loop for x being the symbols
+                  if (fboundp x)
+                  if (string-prefix-p (cdr lib) (symbol-name x))
+                  if (names--find-edebug-traces x)
+                  collect x)
+            nil))))
 
+(defmacro !cdr (list)
+  "Destructive: Set LIST to the cdr of LIST."
+  `(setq ,list (cdr ,list)))
 
+(ert-deftest macro-expansion ()
+  "Test macros work."
+  (byte-compile-file (expand-file-name "./macro-test-aux.el"))
+  (require 'macro-test-aux)
+  (should
+   (equal (test-message) '("4" "3" "2" "1"))))
