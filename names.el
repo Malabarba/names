@@ -96,7 +96,7 @@ if it's an autoloaded macro."
   "List of variables defined in this namespace.")
 (defvar names--fbound nil
   "List of functions defined in this namespace.")
-(defvar names--macro nil 
+(defvar names--macro nil
   "List of macros defined in this namespace.")
 
 (defvar names--keywords nil
@@ -113,23 +113,23 @@ Don't customise this.
 Instead use the :protection keyword when defining the
 namespace.")
 
-(defvar names--current-run nil 
+(defvar names--current-run nil
   "Either 1 or 2, depending on which runthrough we're in.")
 
 (defvar names--var-list
   '(names--name names--regexp names--bound
                  names--macro names--current-run
                  names--fbound names--keywords
-                 names--local-vars names--protection) 
+                 names--local-vars names--protection)
   "List of variables the user shouldn't touch.")
 
-(defvar names--inside-make-autoload nil 
+(defvar names--inside-make-autoload nil
   "Used in `make-autoload' to indicate to `define-namespace' that we're generating autoloads.")
 
 (defconst names--keyword-list
   '((:protection
-     1 
-     (lambda (x) 
+     1
+     (lambda (x)
        (let ((val (symbol-name x)))
          (setq names--protection
                (format "\\`%s" (regexp-quote val)))))
@@ -180,8 +180,8 @@ behaviour.")
      (remove
       nil
       (mapcar (lambda (x) (when (funcall (or ,pred 'identity) (or (car-safe x) x))
-			    (or (car-safe x) x)))
-	      ,var))))
+                (or (car-safe x) x)))
+          ,var))))
 
 (defmacro names--next-keyword (body)
   "If car of BODY is a known keyword, `pop' it (and its arguments) from body.
@@ -278,38 +278,38 @@ http://github.com/Bruce-Connor/names
         (while (setq key-and-args (names--next-keyword body))
           (names--handle-keyword key-and-args)
           (push key-and-args names--keywords))
+
         ;; First have to populate the bound and fbound lists. So we read
         ;; the entire form (without evaluating it).
         (mapc 'names-convert-form body)
         (setq names--current-run (1+ names--current-run))
+
         ;; Then we go back and actually namespace the entire form, which
-        ;; we return so that it can be evaluated.
-        (cons 'progn (mapcar 'names-convert-form
-                             ;; Unless we're in `make-autoload', then just return autoloads.
-                             (if names--inside-make-autoload
-                                 (names--extract-autoloads body)
-                               body))))
+        ;; we'll later return so that it can be evaluated.
+        (setq body
+              (cons 'progn
+                    (mapcar 'names-convert-form
+                            ;; Unless we're in `make-autoload', then just return autoloads.
+                            (if names--inside-make-autoload
+                                (names--extract-autoloads body)
+                              body))))
+
+        ;; On emacs-version < 24.4, the byte-compiler cannot expand a
+        ;; macro if it is being called in the same top-level form as
+        ;; it was defined. That's a problem for us, since the entire
+        ;; namespace is a single top-level form (we return a `progn').
+        ;; The solution is for us to add the macros to
+        ;; `byte-compile-macro-environment' ourselves.
+        (if (and byte-compile-current-buffer
+                 (null names--inside-make-autoload)
+                 (version< emacs-version "24.4"))
+            (let ((byte-compile-macro-environment
+                   byte-compile-macro-environment))
+              (mapc #'names--add-macro-to-environment (cdr body))
+              (macroexpand-all body byte-compile-macro-environment))
+          body))
+
     (mapc (lambda (x) (set x nil)) names--var-list)))
-
-(defun names--extract-autoloads (body)
-  "Return a list of the forms in BODY preceded by :autoload."
-  (let (acons)
-    (when (setq acons (memq :autoload body))
-      (cons
-       (cadr acons)
-       (names--extract-autoloads (cdr (cdr acons)))))))
-
-;;;###autoload
-(defadvice make-autoload (before names-before-make-autoload-advice
-                                 (form file &optional expansion) activate)
-  "Make sure `make-autoload' understands `define-namespace'.
-Use a letbind to indicate to `define-namespace' that we're generating autoloads."
-  (let ((names--inside-make-autoload t)
-        space)
-    (when (eq (car-safe form) 'define-namespace)
-      (setq space (macroexpand form))
-      (ad-set-arg 0 space)
-      (ad-set-arg 2 'expansion))))
 
 (defun names-convert-form (form)
   "Do namespace conversion on FORM.
@@ -330,7 +330,7 @@ See macro `namespace' for more information."
         (names--message "Protected: %s" kar)
         ;; And decide what to do with it.
         (names--handle-args func (cdr form)))
-       
+
        ;; If kar is a list, either 1) it's a lambda form, 2) it's a
        ;; macro we don't know about yet, 3) we have a bug.
        ((consp kar)
@@ -339,13 +339,13 @@ See macro `namespace' for more information."
             (names--warn "Ran into the following strange form.
 Either it's an undefined macro, a macro with a bad debug declaration, or we have a bug.\n%s" form)
           (mapcar 'names-convert-form form)))
-       
+
        ;; Namespaced Functions/Macros
        ((names--fboundp kar)
         (names--message "Namespaced: %s" kar)
         (names--args-of-function-or-macro
          (names--prepend kar) (cdr form) (names--macrop kar)))
-       
+
        ;; General functions/macros/special-forms
        (t (names--handle-args kar (cdr form))))))
    ;; Variables
@@ -359,6 +359,46 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
           form)))
    ;; Values
    (t form)))
+
+
+;;; ---------------------------------------------------------------
+;;; Some auxiliary functions
+(defun names--add-macro-to-environment (form)
+  "If form declares a macro, add it to "
+  (let ((expansion
+         (ignore-errors (macroexpand
+                         form byte-compile-macro-environment))))
+    (and expansion
+         (car-safe expansion)
+         (or (and (memq (car-safe expansion) '(progn prog1 prog2))
+                  (mapc #'names--add-macro-to-environment (cdr expansion)))
+             (and (eq 'defalias (car-safe expansion))
+                  (let ((def (ignore-errors (eval (nth 2 expansion)))))
+                    (and (macrop def)
+                         (push (cons (ignore-errors
+                                       (eval (nth 1 expansion)))
+                                     (cdr-safe def))
+                               byte-compile-macro-environment))))))))
+
+(defun names--extract-autoloads (body)
+  "Return a list of the forms in BODY preceded by :autoload."
+  (let (acons)
+    (when (setq acons (memq :autoload body))
+      (cons
+       (cadr acons)
+       (names--extract-autoloads (cdr (cdr acons)))))))
+
+;;;###autoload
+(defadvice make-autoload (before names-before-make-autoload-advice
+                                 (form file &optional expansion) activate)
+  "Make sure `make-autoload' understands `define-namespace'.
+Use a letbind to indicate to `define-namespace' that we're generating autoloads."
+  (let ((names--inside-make-autoload t)
+        space)
+    (when (eq (car-safe form) 'define-namespace)
+      (setq space (macroexpand form))
+      (ad-set-arg 0 space)
+      (ad-set-arg 2 'expansion))))
 
 (defvar names--ignored-forms '(declare)
   "The name of functions/macros/special-forms which we return without reading.")
@@ -391,9 +431,6 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
                byte-compile-function-environment)
     (apply 'message (concat "[names] " f) rest)))
 
-
-;;; ---------------------------------------------------------------
-;;; Some auxiliary functions
 (defun names--error-if-using-vars ()
   "Remind the developer that variables are not customizable."
   (mapcar
@@ -482,7 +519,7 @@ returns nil."
       (setq spec indirect))
     spec))
 
-(defvar names--is-inside-macro nil 
+(defvar names--is-inside-macro nil
   "Auxiliary var used in `names--macro-args-using-edebug'.")
 
 (defvar names--gensym-counter 0
@@ -511,7 +548,7 @@ phenomenally. So we hack into edebug instead."
               (((symbol-function 'message) #'names--edebug-message)
                ((symbol-function 'cl-gensym) #'names--gensym)
                ((symbol-function 'edebug-form) #'names--edebug-form)
-               ((symbol-function 'edebug-make-enter-wrapper) 
+               ((symbol-function 'edebug-make-enter-wrapper)
                 #'names--edebug-make-enter-wrapper))
             (edebug-read-top-level-form))))
     (invalid-read-syntax
@@ -560,13 +597,13 @@ The name is made by appending a number to PREFIX and preppending \"names\", defa
 
          ;; We DO want to convert the arguments that edebug identifies
          ;; as forms (level-1).
-         
+
          ;; We also don't want to do anything once we're inside these
          ;; level-1 arguments (>= level 2), because that will already
          ;; be done by our own recursion when we call
          ;; `names-convert-form' on the level-1 forms.
          ;; So we check for (equal names--is-inside-macro t)
-         
+
          (func (if (or (equal names--is-inside-macro t)
                        (equal names--is-inside-macro form))
                    'identity 'names-convert-form))
@@ -627,7 +664,7 @@ the keyword arguments, if any."
 ;; lines of the functions defined below. It will be automatically used
 ;; whenever that form is found.
 
-;;; Defun, defmacro, and defsubst macros are pretty predictable. 
+;;; Defun, defmacro, and defsubst macros are pretty predictable.
 (defun names--convert-defmacro (form)
   "Special treatment for `defmacro' FORM."
   (let* ((names--name-already-prefixed t)
@@ -776,7 +813,7 @@ function name, a list is namespaced as a lambda form."
                       (if (names--fboundp kadr)
                           (names--prepend kadr)
                         kadr))))
-           
+
            ;; A symbol inside a regular quote should be a function, if
            ;; the user asked for that.
            ((and (eq this-name 'quote)

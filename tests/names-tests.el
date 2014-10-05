@@ -212,12 +212,9 @@
                   collect x)
             nil))))
 
-(defmacro !cdr (list)
-  "Destructive: Set LIST to the cdr of LIST."
-  `(setq ,list (cdr ,list)))
-
 (ert-deftest macro-expansion ()
   "Test macros work."
+  (setq byte-compile-error-on-warn t)
   (byte-compile-file (expand-file-name "./macro-test-aux.el"))
   (require 'macro-test-aux)
   (should
