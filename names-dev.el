@@ -74,7 +74,8 @@ correctly."
 (setq lisp-el-font-lock-keywords-2
       (append
        names-font-lock
-       lisp-el-font-lock-keywords-2))
+       (and (boundp 'lisp-el-font-lock-keywords-2)
+            lisp-el-font-lock-keywords-2)))
 
 (defun names-eval-defun (edebug-it)
   "Identical to `eval-defun', except it works for forms inside namespaces.
