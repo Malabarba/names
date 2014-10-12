@@ -62,7 +62,7 @@ it will set PROP."
                   (null (setq val (get f prop)))
                   (fboundp f))
         (let ((fundef (symbol-function f)))
-          (if (and (autoloadp fundef)
+          (if (and (names--autoloadp fundef)
                    (not (equal fundef (names--autoload-do-load fundef f))))
               nil ;Re-try `get' on the same `f'.
             (setq f fundef))))
@@ -81,10 +81,11 @@ it will set PROP."
     (let ((def (indirect-function object t)))
       (when (consp def)
         (or (eq 'macro (car def))
-            (and (autoloadp def) (memq (nth 4 def) '(macro t))))))))
+            (and (names--autoloadp def) (memq (nth 4 def) '(macro t))))))))
 
-(unless (fboundp 'autoloadp)
-  (defsubst autoloadp (object)
+(if (fboundp 'autoloadp)
+    (defalias 'names--autoloadp #'autoloadp)
+  (defsubst names--autoloadp (object)
     "Non-nil if OBJECT is an autoload."
     (eq 'autoload (car-safe object))))
 
@@ -94,10 +95,6 @@ it will set PROP."
   (def-edebug-spec cl-defmacro defmacro*))
 (unless (get-edebug-spec 'setq-local)
   (def-edebug-spec setq-local setq))
-;; (unless (get-edebug-spec 'push)
-;;   (def-edebug-spec push (form form)))
-;; (unless (get-edebug-spec 'pop)
-;;   (def-edebug-spec pop (form)))
 (unless (get-edebug-spec 'loop)
   (def-edebug-spec loop
     (&rest &or
@@ -528,7 +525,9 @@ returns nil."
 (defun names--args-of-function-or-macro (name args macro)
   "Check whether NAME is a function or a macro, and handle ARGS accordingly."
   (if macro
-      (let ((it (names--get-edebug-spec name)))
+      (let ((it (names--get-edebug-spec name))
+            (names--verbose (eq name 'push)))
+        (names--message "Edebug-spec of `%s' is %s" name it)
         ;; Macros where we evaluate all arguments are like functions.
         (if (equal it t)
             (names--args-of-function-or-macro name args nil)
@@ -595,8 +594,12 @@ phenomenally. So we hack into edebug instead."
 (defvar names--message-backup (symbol-function 'message)
   "Where names stores `message's definition while overriding it.")
 
+(defvar names--verbose nil 
+  "If non-nil, verbose message are printed regardless of the :verbose keyword.
+Use this to easily turn on verbosity during tests.")
+
 (defun names--edebug-message (&rest _)
-  (if (names--keyword :verbose)
+  (if (or (names--keyword :verbose) names--verbose)
       (apply names--message-backup _)
     (apply 'format _)))
 
