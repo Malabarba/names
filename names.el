@@ -625,46 +625,43 @@ The name is made by appending a number to PREFIX and preppending \"names\", defa
   ;; Add the point offsets to the edebug-offset-list for the form.
   (let* ((form (edebug-top-element-required cursor "Expected form"))
          (offset (edebug-top-offset cursor))
-         ;; This variable equals the current `names--edebug-form' depth.
-
          ;; We don't want to convert the entire form that was passed
          ;; to `names--macro-args-using-edebug', since the head of
          ;; that was already converted and it would lead to an
          ;; infinite loop.
          ;; So we check for (equal names--is-inside-macro form)
+         ;; Simply incrementing a depth counter didn't work, for a
+         ;; reason I can no longer remember.
 
          ;; We DO want to convert the arguments that edebug identifies
-         ;; as forms (level-1).
-
-         ;; We also don't want to do anything once we're inside these
-         ;; level-1 arguments (>= level 2), because that will already
-         ;; be done by our own recursion when we call
-         ;; `names-convert-form' on the level-1 forms.
-         ;; So we check for (equal names--is-inside-macro t)
-
-         (func (if (or (equal names--is-inside-macro t)
+         ;; as forms (level-1). And we do that ourselves, don't pass
+         ;; them to edebug.
+         (func (if (or (eq names--is-inside-macro t)
                        (equal names--is-inside-macro form))
                    'identity 'names-convert-form))
          (names--is-inside-macro
           (if (eq func 'names-convert-form)
               t names--is-inside-macro)))
-    (names--message " [Edebug] ran into this: %S" form)
+    (names--message " [Edebug] Ran into this: %S" form)
+    (names--message "          Cursor: %S" cursor)
     (prog1
         (cond
          ((consp form) ;; The first offset for a list form is for the list form itself.
-          (let* ((head (car form))
-                 (spec (and (symbolp head) (get-edebug-spec head)))
-                 (new-cursor (edebug-new-cursor form offset)))
-            ;; Find out if this is a defining form from first symbol.
-            ;; An indirect spec would not work here, yet.
-            (if (and (consp spec) (eq '&define (car spec)))
-                (edebug-defining-form
-                 new-cursor
-                 (car offset) ;; before the form
-                 (edebug-after-offset cursor)
-                 (cons (symbol-name head) (cdr spec)))
-              ;; Wrap a regular form.
-              (funcall func (edebug-list-form new-cursor)))))
+          (if (eq func 'names-convert-form)
+              (names-convert-form form)
+            (let* ((head (car form))
+                   (spec (and (symbolp head) (get-edebug-spec head)))
+                   (new-cursor (edebug-new-cursor form offset)))
+              ;; Find out if this is a defining form from first symbol.
+              ;; An indirect spec would not work here, yet.
+              (if (and (consp spec) (eq '&define (car spec)))
+                  (edebug-defining-form
+                   new-cursor
+                   (car offset) ;; before the form
+                   (edebug-after-offset cursor)
+                   (cons (symbol-name head) (cdr spec)))
+                ;; Wrap a regular form.
+                (edebug-list-form new-cursor)))))
 
          ((symbolp form)
           (funcall func form))

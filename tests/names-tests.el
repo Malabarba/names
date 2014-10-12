@@ -203,18 +203,19 @@
 
 (ert-deftest no-leftover-edebug ()
   "Test no edebug leftover in function definitions."
-  (dolist (lib '((s "s-" "s.el")
-                 (dash "-" "dash.el")
-                 (elnode "elnode/" "elnode/elnode.el")))
-    (byte-compile-file (nth 2 lib))
-    (require (car lib))
-    (should
-     (equal (loop for x being the symbols
-                  if (fboundp x)
-                  if (string-prefix-p (cadr lib) (symbol-name x))
-                  if (names--find-edebug-traces x)
-                  collect x)
-            nil))))
+  (let ((names--verbose nil))
+    (dolist (lib '((s "s-" "s.el")
+                   (dash "-" "dash.el")
+                   (elnode "elnode/" "elnode/elnode.el")))
+      ;; (byte-compile-file (nth 2 lib))
+      (require (car lib))
+      (should
+       (equal (loop for x being the symbols
+                    if (fboundp x)
+                    if (string-prefix-p (cadr lib) (symbol-name x))
+                    if (names--find-edebug-traces x)
+                    collect x)
+              nil)))))
 
 (ert-deftest macro-expansion ()
   "Test macros work."
