@@ -95,10 +95,9 @@ adheres to this standard.
 - At compilation, it will create the exact same compiled file (with no left-over reference to =names.el= functions).
 
 *** Tested On:
-*Names* is still in testing phase. If you're interested, try using it
-with one of your packages and [[https://github.com/Bruce-Connor/names/issues][let me know how it goes]]. Below are the
-packages which I've tested it on.
-
+Below are the packages on which I've tested *Names*. If you're
+interested, try using it on one of your packages and [[https://github.com/Bruce-Connor/names/issues][let me know how
+it goes]].
 **** elnode
 - *Number of ert tests passed:* Same as before namespacing (62).
 - *Reduction in code size:* Approx. 2000 characters.
