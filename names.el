@@ -130,7 +130,8 @@ it will set PROP."
 
 (defvar names--keywords nil
   "Keywords that were passed to the current namespace.
-Current possible keywords are :let-vars :global :protection")
+See `names--keyword-list' for a list and description of possible
+keywords.")
 
 (defvar names--local-vars nil
   "Non-global vars that are let/lambda bound at the moment.
@@ -164,9 +165,9 @@ namespace.")
                (format "\\`%s" (regexp-quote val)))))
      "Change the value of the `names--protection' variable.")
 
-    (:let-vars
+    (:no-let-vars
      0 nil
-     "Indicates variables assigned in let-bind are candidates for namespacing.")
+     "Indicates variables assigned in let-bind are NOT candidates for namespacing.")
 
     (:verbose
      0 nil
@@ -927,9 +928,9 @@ Return (macro . (names-convert-form (cdr FORM)))."
 (defalias 'names--convert-defsubst* 'names--convert-defun)
 
 (defun names--let-var-convert-then-add (sym add)
-  "Try to convert SYM if :let-vars is in use.
+  "Try to convert SYM unless :no-let-vars is in use.
 If ADD is non-nil, add resulting symbol to `names--local-vars'."
-  (let ((name (if (names--keyword :let-vars)
+  (let ((name (if (null (names--keyword :no-let-vars))
                   (names-convert-form sym)
                 sym)))
     (when add (add-to-list 'names--local-vars name))

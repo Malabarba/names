@@ -117,19 +117,19 @@
 (names-deftest let-vars
   "Test letbound variables."
   ;; Neither a-c nor a-b exist
-  (:let-vars 
+  (:no-let-vars 
    (defun foo () (let ((c b)) c)))
   ((defun a-foo () (let ((c b)) c)))
-  ;; Both a-c and a-b exist
-  (:let-vars
-   (defvar c nil "")
+  ;; Both a-c and a-b exist, but no keyword.
+  ((defvar c nil "")
    (defvar b nil "")
    (defun foo () (let ((c b)) c)))
   ((defvar a-c nil "")
    (defvar a-b nil "")
    (defun a-foo () (let ((a-c a-b)) a-c)))
-  ;; Both a-c and a-b exist, but no keyword.
-  ((defvar c nil "")
+  ;; Both a-c and a-b exist
+  (:no-let-vars
+   (defvar c nil "")
    (defvar b nil "")
    (defun foo () (let ((c b)) c)))
   ((defvar a-c nil "")
