@@ -83,7 +83,7 @@ For instance
 (define-namespace foo-
 (defvar bar "2")
 
-(let ((bar "1"))
+(defun funca (bar)
   (string-to-int bar))
 )
 #+end_src
@@ -91,19 +91,24 @@ expands to
 #+begin_src emacs-lisp
 (defvar foo-bar "2")
 
-(let ((bar "1"))
+(defun funca (bar)
   (string-to-int bar))
 #+end_src
 
-Note how the last =bar= isn't namespaced. That's because the let-bind
-is a local definition, and takes precedence over the global =foo-bar=.
-The argument list of functions, macros, and lambdas are also local
-definitions.
+Note how the last =bar= isn't namespaced. That's because it is local
+to the =funca= function, and takes precedence over the global
+=foo-bar=. The argument list of functions, macros, and lambdas are
+all local definitions.
 
-You can customize this behaviour (for the =let= case, not for argument
-lists) with the =:let-vars= keyword. Then:
+By default, this does not happen with let bindings, they are
+namespaced as usual (if the variable name in question has a global
+definition). The reason is that let bindings are commonly used to
+temporarily override global bindings. 
+
+You can customize this behaviour with the =:no-let-vars= keyword.
+Then:
 #+begin_src emacs-lisp
-(define-namespace foo- :let-vars
+(define-namespace foo- :no-let-vars
 (defvar bar "2")
 
 (let ((bar "1"))
@@ -114,8 +119,8 @@ will expand to
 #+begin_src emacs-lisp
 (defvar foo-bar "2")
 
-(let ((foo-bar "1"))
-  (string-to-int foo-bar))
+(let ((bar "1"))
+  (string-to-int bar))
 #+end_src
 
 ** Macros
