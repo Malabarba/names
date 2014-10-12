@@ -83,6 +83,33 @@ if it's an autoloaded macro."
     "Non-nil if OBJECT is an autoload."
     (eq 'autoload (car-safe object))))
 
+(unless (get-edebug-spec 'cl-defun)
+  (def-edebug-spec cl-defun defun*))
+(unless (get-edebug-spec 'cl-defmacro)
+  (def-edebug-spec cl-defmacro defmacro*))
+(unless (get-edebug-spec 'setq-local)
+  (def-edebug-spec setq-local setq))
+;; (unless (get-edebug-spec 'push)
+;;   (def-edebug-spec push (form form)))
+;; (unless (get-edebug-spec 'pop)
+;;   (def-edebug-spec pop (form)))
+(unless (get-edebug-spec 'loop)
+  (def-edebug-spec loop
+    (&rest &or
+           ;; These are usually followed by a symbol, but it can
+           ;; actually be any destructuring-bind pattern, which
+           ;; would erroneously match `form'.
+           [[&or "for" "as" "with" "and"] sexp]
+           ;; These are followed by expressions which could
+           ;; erroneously match `symbolp'.
+           [[&or "from" "upfrom" "downfrom" "to" "upto" "downto"
+                 "above" "below" "by" "in" "on" "=" "across"
+                 "repeat" "while" "until" "always" "never"
+                 "thereis" "collect" "append" "nconc" "sum"
+                 "count" "maximize" "minimize" "if" "unless"
+                 "return"] form]
+           ;; Simple default, which covers 99% of the cases.
+           symbolp form)))
 
 ;;; ---------------------------------------------------------------
 ;;; Variables
