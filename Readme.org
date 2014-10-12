@@ -2,8 +2,6 @@
 
 * Names [[https://secure.travis-ci.org/Bruce-Connor/names.png?branch=master]]
 
-/NOTE: While development on *Names* is mostly done, it is still undergoing tests. Get in touch if you'd like to test./
-
 *Names* is designed as a practical, complete, robust, and debuggable
 tool which writes your namespaces for you.
 
