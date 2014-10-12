@@ -854,10 +854,15 @@ testing code so we specifically test that they work."
           '(("a" . "10")
             ("b" . "hello world!")
             ("mycookie" . "101")))))
-    (should
-     (equal
-      (elnode--cookie-store-to-header-value)
-      "a=10; b=hello%20world%21; mycookie=101")))
+    (if (version< emacs-version "24.3")
+        (should
+         (equal
+          (elnode--cookie-store-to-header-value)
+          "a=10; b=hello%20world!; mycookie=101"))
+      (should
+       (equal
+        (elnode--cookie-store-to-header-value)
+        "a=10; b=hello%20world%21; mycookie=101"))))
   (let ((elnode--cookie-store (make-hash-table :test 'equal)))
     (should-not
      (elnode--cookie-store-to-header-value))))
