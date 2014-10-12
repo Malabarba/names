@@ -45,38 +45,43 @@
 ;;; Change Log:
 ;; 0.1a - 2014/05/20 - Created File.
 ;;; Code:
+
 
-(eval-when-compile (require 'edebug))
+(require 'cl-lib)
+(require 'edebug)
 
 ;;; Support
-(unless (fboundp 'function-get)
-  (defun function-get (f prop &optional autoload)
+(if (fboundp 'function-get)
+    (defalias 'names--function-get #'function-get)
+  (defun names--function-get (f prop &rest _)
     "Return the value of property PROP of function F.
-If AUTOLOAD is non-nil and F is autoloaded, try to autoload it
-in the hope that it will set PROP.  If AUTOLOAD is `macro', only do it
-if it's an autoloaded macro."
+If F is an autoloaded macro, try to autoload it in the hope that
+it will set PROP."
     (let ((val nil))
       (while (and (symbolp f)
                   (null (setq val (get f prop)))
                   (fboundp f))
         (let ((fundef (symbol-function f)))
-          (if (and autoload (autoloadp fundef)
-                   (not (equal fundef
-                               (autoload-do-load fundef f
-                                                 (if (eq autoload 'macro)
-                                                     'macro)))))
-              nil                         ;Re-try `get' on the same `f'.
+          (if (and (autoloadp fundef)
+                   (not (equal fundef (names--autoload-do-load fundef f))))
+              nil ;Re-try `get' on the same `f'.
             (setq f fundef))))
-      val)))
+      val))
+  (defun names--autoload-do-load (def name)
+    "Load autoloaded definition DEF from function named NAME."
+    (unless (load (cadr def) 'noerror)
+      (error "Macro `%s' is autoloaded, but its file (%s) couldn't be loaded"
+             name (cadr def)))
+    (symbol-function name)))
 
-(unless (fboundp 'macrop)
-  (defun macrop (object)
+(if (fboundp 'macrop)
+    (defalias 'names--compat-macrop #'macrop)
+  (defun names--compat-macrop (object)
     "Non-nil if and only if OBJECT is a macro."
     (let ((def (indirect-function object t)))
       (when (consp def)
         (or (eq 'macro (car def))
             (and (autoloadp def) (memq (nth 4 def) '(macro t))))))))
-(declare-function 'macrop "names")
 
 (unless (fboundp 'autoloadp)
   (defsubst autoloadp (object)
@@ -294,12 +299,12 @@ http://github.com/Bruce-Connor/names
                (names--filter-if-bound byte-compile-variables)))
              (names--fbound
               (names--remove-namespace-from-list
-               (names--filter-if-bound byte-compile-macro-environment 'macrop)
-               (names--filter-if-bound byte-compile-function-environment 'macrop)))
+               (names--filter-if-bound byte-compile-macro-environment 'names--compat-macrop)
+               (names--filter-if-bound byte-compile-function-environment 'names--compat-macrop)))
              (names--macro
               (names--remove-namespace-from-list
-               (names--filter-if-bound byte-compile-macro-environment (lambda (x) (not (macrop x))))
-               (names--filter-if-bound byte-compile-function-environment (lambda (x) (not (macrop x))))))
+               (names--filter-if-bound byte-compile-macro-environment (lambda (x) (not (names--compat-macrop x))))
+               (names--filter-if-bound byte-compile-function-environment (lambda (x) (not (names--compat-macrop x))))))
              names--keywords names--local-vars key-and-args)
         ;; Read keywords
         (while (setq key-and-args (names--next-keyword body))
@@ -392,16 +397,18 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
 ;;; Some auxiliary functions
 (defun names--add-macro-to-environment (form)
   "If form declares a macro, add it to "
-  (let ((expansion
-         (ignore-errors (macroexpand
-                         form byte-compile-macro-environment))))
+  (let ((expansion form))
+    (while (names--compat-macrop (car-safe expansion))
+      (setq expansion
+            (ignore-errors (macroexpand
+                            expansion byte-compile-macro-environment))))
     (and expansion
          (car-safe expansion)
          (or (and (memq (car-safe expansion) '(progn prog1 prog2))
                   (mapc #'names--add-macro-to-environment (cdr expansion)))
              (and (eq 'defalias (car-safe expansion))
                   (let ((def (ignore-errors (eval (nth 2 expansion)))))
-                    (and (macrop def)
+                    (and (names--compat-macrop def)
                          (push (cons (ignore-errors
                                        (eval (nth 1 expansion)))
                                      (cdr-safe def))
@@ -445,7 +452,7 @@ Use a letbind to indicate to `define-namespace' that we're generating autoloads.
           (progn (names--message "Special handling: %s" handler)
                  (funcall handler (cons func args)))
         ;; If it isn't special, it's either a function or a macro.
-        (names--args-of-function-or-macro func args (macrop func))))))
+        (names--args-of-function-or-macro func args (names--compat-macrop func))))))
 
 (defun names--message (f &rest rest)
   "If :verbose is on, pass F and REST to `message'."
@@ -502,7 +509,7 @@ are namespaced become un-namespaced."
   "Is namespace+SBL a fboundp symbol?"
   (or (memq sbl names--macro)
       (and (names--keyword :global)
-           (macrop (names--prepend sbl)))))
+           (names--compat-macrop (names--prepend sbl)))))
 
 (defun names--keyword (keyword)
   "Was KEYWORD one of the keywords passed to the `namespace' macro?"
@@ -541,7 +548,8 @@ returns nil."
     (while (progn
              (and (symbolp indirect)
                   (setq indirect
-                        (function-get indirect 'edebug-form-spec 'macro))))
+                        (names--function-get 
+                         indirect 'edebug-form-spec 'macro))))
       ;; (edebug-trace "indirection: %s" edebug-form-spec)
       (setq spec indirect))
     spec))
