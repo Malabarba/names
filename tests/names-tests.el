@@ -1,5 +1,8 @@
 (require 'names)
 
+(unless (fboundp 'macrop)
+  (defalias 'macrop #'names--compat-macrop))
+
 (defmacro names-deftest (name doc &rest body)
   "Test if (namespace NAME FORMS-A) is the same as FORM-B."
   (declare (indent defun)
@@ -200,14 +203,15 @@
 
 (ert-deftest no-leftover-edebug ()
   "Test no edebug leftover in function definitions."
-  (dolist (lib '((dash . "-")
-                 (s . "s-")
-                 (elnode . "elnode/")))
+  (dolist (lib '((s "s-" "s.el")
+                 (dash "-" "dash.el")
+                 (elnode "elnode/" "elnode/elnode.el")))
+    (byte-compile-file (nth 2 lib))
     (require (car lib))
     (should
      (equal (loop for x being the symbols
                   if (fboundp x)
-                  if (string-prefix-p (cdr lib) (symbol-name x))
+                  if (string-prefix-p (cadr lib) (symbol-name x))
                   if (names--find-edebug-traces x)
                   collect x)
             nil))))
