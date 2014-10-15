@@ -15,18 +15,6 @@
 ;; The description is way too large to sanely write here. Please see
 ;; the URL: http://github.com/Bruce-Connor/names
 
-;;; Instructions:
-;;
-;; INSTALLATION
-;;
-;; This package is available fom Melpa, you may install it by calling
-;; M-x package-install RET names.
-;;
-;; Alternatively, you can download it manually, place it in your
-;; `load-path' and require it with
-;;
-;;     (require 'names)
-
 ;;; License:
 ;;
 ;; This file is NOT part of GNU Emacs.
@@ -43,7 +31,7 @@
 ;;
 
 ;;; Change Log:
-;; 0.1a - 2014/05/20 - Created File.
+;; 0.5 - 2014/05/20 - First Release.
 ;;; Code:
 
 
@@ -439,11 +427,8 @@ Use a letbind to indicate to `define-namespace' that we're generating autoloads.
   "Generic handling for the form (FUNC . ARGS), without namespacing FUNC."
   (if (memq func names--ignored-forms)
       (cons func args)
-    ;; TODO: Fix this logic before release.
-    ;; This is a terrible way of handling the function choosing. We
-    ;; intern tons of symbols which are never used, not to mention
-    ;; it's slow. Just change it to an alist or a hash-table.
-    (let ((handler (intern (format "names--convert-%s" func))))
+    ;; TODO: Speed this up. Just change it to an alist or a hash-table.
+    (let ((handler (intern-soft (format "names--convert-%s" func))))
       ;; Some function-like forms get special handling.
       ;; That's anything with a names--convert-%s function defined.
       (if (fboundp handler)

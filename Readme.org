@@ -5,7 +5,7 @@
 *Names* is designed as a practical, complete, robust, and debuggable
 tool which writes your namespaces for you.
 
-[[file:package-example.png]]
+[[file:package-example.png]]\\
 /Example usage of Names to namespace an emacs-lisp function./
 *** A Namespace implementation for Emacs-Lisp
 
