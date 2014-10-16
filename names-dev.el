@@ -29,7 +29,7 @@
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
-;; 
+;;
 
 ;;; Change Log:
 ;; 0.1a - 2014/07/18 - Created File.
@@ -114,7 +114,7 @@ Argument EDEBUG-IT is the same as `eval-defun'."
         (emacs-lisp-mode)
         (save-excursion
           ;; Print everything inside the `progn'.
-          (mapcar 
+          (mapc
            (lambda (it) (pp it (current-buffer)))
            (cdr (macroexpand
                  `(define-namespace ,name :global ,@keylist ,form)))))
@@ -141,7 +141,7 @@ buffer name."
   (get-buffer-create
    (concat
     " *names "
-    (format "%s %s" 
+    (format "%s %s"
             (or (car-safe form) (random 10000))
             (or (car-safe (cdr-safe form)) (random 10000)))
     "*")))
