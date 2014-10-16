@@ -40,6 +40,7 @@
 (require 'edebug)
 
 ;;; Support
+(declare-function names--autoload-do-load "names" 2)
 (if (fboundp 'function-get)
     (defalias 'names--function-get #'function-get)
   (defun names--function-get (f prop &rest _)
@@ -109,6 +110,11 @@ it will set PROP."
 (defvar names--name nil
   "Name of the current namespace inside the `define-namespace' macro.")
 (defvar names--regexp nil "Regexp matching `names--name'.")
+
+(defvar names--load-file (and load-file-name (expand-file-name load-file-name))
+  "The file where the current version of Names was loaded.
+This is used by `names--check-for-update' to check if a new
+version has been installed.")
 
 (defvar names--bound nil
   "List of variables defined in this namespace.")
@@ -302,8 +308,14 @@ http://github.com/Bruce-Connor/names
 
 \(fn NAME [KEYWORDS] BODY)"
   (declare (indent (lambda (&rest x) 0))
-           (debug (&define name body)))
+           (debug (&define name [&rest keywordp &optional [&or symbolp (symbolp . symbolp)]] body)))
+  (names--reload-if-upgraded)
   (names--error-if-using-vars)
+  (names--define-namespace-implementation name body))
+
+(defun names--define-namespace-implementation (name body)
+  "Namespace BODY using NAME.
+See `define-namespace' for more information."
   (unwind-protect
       (let* ((names--name name)
              (names--regexp
@@ -366,6 +378,26 @@ http://github.com/Bruce-Connor/names
 
     ;; Exiting the `unwind-protect'.
     (mapc (lambda (x) (set x nil)) names--var-list)))
+
+(defun names--reload-if-upgraded ()
+  "Verify if there's a more recent version of Names in the `load-path'.
+If so, evaluate it."
+  (ignore-errors 
+    (let ((lp (expand-file-name (find-library-name "names")))
+          new-version)
+      (when (and lp
+                 (not (string= lp names--load-file))
+                 (file-readable-p lp))
+        (with-temp-buffer  
+          (insert-file-contents-literally lp)
+          (goto-char (point-min))
+          (setq new-version
+                (save-excursion
+                  (when (search-forward-regexp
+                         "(defconst\\s-+names-version\\s-+\"\\([^\"]+\\)\"" nil t)
+                    (match-string-no-properties 1))))
+          (when (and new-version (version< names-version new-version))
+            (eval-buffer nil lp)))))))
 
 (defun names-convert-form (form)
   "Do namespace conversion on FORM.
