@@ -4,7 +4,7 @@
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
-;; Version: 0.5.1
+;; Version: 0.5.2
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords:
 ;; Prefix: names
@@ -104,7 +104,7 @@ it will set PROP."
 
 ;;; ---------------------------------------------------------------
 ;;; Variables
-(defconst names-version "0.5.1" "Version of the names.el package.")
+(defconst names-version "0.5.2" "Version of the names.el package.")
 
 (defvar names--name nil
   "Name of the current namespace inside the `define-namespace' macro.")
@@ -891,7 +891,7 @@ Everything else is converted as regular forms (which usually
 means no conversion will happen since it's usually keywords and
 quoted symbols)."
   (let ((name (names--remove-namespace (cadr form)))
-        (copy (copy-list form)))
+        (copy (cl-copy-list form)))
     ;; Register the mode name
     (when name
       (add-to-list 'names--fbound name)
