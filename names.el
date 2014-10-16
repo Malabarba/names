@@ -4,7 +4,7 @@
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
-;; Version: 0.5
+;; Version: 0.5.1
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords:
 ;; Prefix: names
@@ -31,7 +31,8 @@
 ;;
 
 ;;; Change Log:
-;; 0.5 - 2014/05/20 - First Release.
+;; 0.5.1 - 2014/10/16 - Add the :group keyword.
+;; 0.5   - 2014/05/20 - First Release.
 ;;; Code:
 
 
@@ -103,7 +104,7 @@ it will set PROP."
 
 ;;; ---------------------------------------------------------------
 ;;; Variables
-(defconst names-version "0.5" "Version of the names.el package.")
+(defconst names-version "0.5.1" "Version of the names.el package.")
 
 (defvar names--name nil
   "Name of the current namespace inside the `define-namespace' macro.")
