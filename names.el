@@ -106,7 +106,7 @@ it will set PROP."
 (defconst names-version "0.5" "Version of the names.el package.")
 
 (defvar names--name nil
-  "Name of the current namespace inside the `namespace' macro.")
+  "Name of the current namespace inside the `define-namespace' macro.")
 (defvar names--regexp nil "Regexp matching `names--name'.")
 
 (defvar names--bound nil
@@ -136,13 +136,22 @@ namespace.")
 
 (defvar names--var-list
   '(names--name names--regexp names--bound
-                 names--macro names--current-run
-                 names--fbound names--keywords
-                 names--local-vars names--protection)
+                names--group names--group-parent
+                names--macro names--current-run
+                names--fbound names--keywords
+                names--local-vars names--protection)
   "List of variables the user shouldn't touch.")
 
 (defvar names--inside-make-autoload nil
   "Used in `make-autoload' to indicate to `define-namespace' that we're generating autoloads.")
+
+(defvar names--group nil 
+  "The name to be given to `defgroup'.
+Is only non-nil if the :group keyword is passed to `define-namespace'.")
+
+(defvar names--group-parent nil 
+  "The name of the parent to be given to `defgroup'.
+Is only non-nil if the :group keyword is passed to `define-namespace'.")
 
 (defconst names--keyword-list
   '((:protection
@@ -171,7 +180,29 @@ namespace.")
 
     (:dont-assume-function-quote
      0 nil
-     "Indicate symbols quoted with `function' should NOT be considered function names."))
+     "Indicate symbols quoted with `function' should NOT be considered function names.")
+    
+    (:group
+     1
+     (lambda (x)
+       (if (symbolp x)
+           (let ((name (symbol-name names--name)))
+             (setq names--group
+                   (intern (substring name 0 (1- (length name)))))
+             (setq names--group-parent x))
+         (setq names--group (car x))
+         (setq names--group-parent (cdr x))))
+     "Indicate `define-namespace' should make a `defgroup' for you.
+The name of the group is derived from the namespace name, by
+removing the last character from it.
+This keyword should be given one argument, the name of the parent
+group as an unquoted symbol.
+Alternatively, the argument can be a cons cell. Then the `car' is
+the group's name, and the `cdr' is the group's parent.
+
+If this keyword is provided, besides including a defgroup, Names
+will also include a :group keyword in every `defcustom' (and
+similar forms) that don't already contain one."))
   "List of keywords used by `define-namespace'.
 Each element is a list containing
     (KEYWORD N DEFINITION DOCUMENTATION)
@@ -291,7 +322,8 @@ http://github.com/Bruce-Connor/names
               (names--remove-namespace-from-list
                (names--filter-if-bound byte-compile-macro-environment (lambda (x) (not (names--compat-macrop x))))
                (names--filter-if-bound byte-compile-function-environment (lambda (x) (not (names--compat-macrop x))))))
-             names--keywords names--local-vars key-and-args)
+             names--keywords names--local-vars key-and-args
+             names--group names--group-parent)
         ;; Read keywords
         (while (setq key-and-args (names--next-keyword body))
           (names--handle-keyword key-and-args)
@@ -305,12 +337,16 @@ http://github.com/Bruce-Connor/names
         ;; Then we go back and actually namespace the entire form, which
         ;; we'll later return so that it can be evaluated.
         (setq body
-              (cons 'progn
-                    (mapcar 'names-convert-form
-                            ;; Unless we're in `make-autoload', then just return autoloads.
-                            (if names--inside-make-autoload
-                                (names--extract-autoloads body)
-                              body))))
+              (cons
+               'progn
+               (append
+                (when names--group
+                  (list (names--generate-defgroup)))
+                (mapcar 'names-convert-form
+                        ;; Unless we're in `make-autoload', then just return autoloads.
+                        (if names--inside-make-autoload
+                            (names--extract-autoloads body)
+                          body)))))
 
         ;; On emacs-version < 24.4, the byte-compiler cannot expand a
         ;; macro if it is being called in the same top-level form as
@@ -327,6 +363,7 @@ http://github.com/Bruce-Connor/names
               (macroexpand-all body byte-compile-macro-environment))
           body))
 
+    ;; Exiting the `unwind-protect'.
     (mapc (lambda (x) (set x nil)) names--var-list)))
 
 (defun names-convert-form (form)
@@ -381,6 +418,13 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
 
 ;;; ---------------------------------------------------------------
 ;;; Some auxiliary functions
+(defun names--generate-defgroup ()
+  "Return a `defgroup' form for the current namespace."
+  (list 'defgroup names--group nil
+        (format "Customization group for %s." names--group)
+        :prefix (symbol-name names--name)
+        :group `',names--group-parent))
+
 (defun names--add-macro-to-environment (form)
   "If form declares a macro, add it to "
   (let ((expansion form))
@@ -656,6 +700,15 @@ The name is made by appending a number to PREFIX and preppending \"names\", defa
          (t form))
       (edebug-move-cursor cursor))))
 
+(defun names--maybe-append-group (form)
+  "Append :group `names--group' to the form.
+Only `names--group' isn't nil and if the form doesn't already
+have a :group."
+  (if (or (null names--group)
+          (memq :group form))
+      form
+    (append form (list :group (list 'quote names--group)))))
+
 
 ;;; ---------------------------------------------------------------
 ;;; Interpreting keywords passed to the main macro.
@@ -747,8 +800,11 @@ the keyword arguments, if any."
 
 (defalias 'names--convert-defconst 'names--convert-defvar
   "Special treatment for `defconst' FORM.")
-(defalias 'names--convert-defcustom 'names--convert-defvar
-  "Special treatment for `defcustom' FORM.")
+
+(defun names--convert-defcustom (form)
+  "Special treatment for `defcustom' FORM."
+  (names--maybe-append-group
+   (names--convert-defvar form)))
 
 (defun names--convert-custom-declare-variable (form)
   "Special treatment for `custom-declare-variable' FORM."
@@ -772,8 +828,9 @@ the keyword arguments, if any."
 (defun names--convert-defface (form)
   "Special treatment for `defface' FORM.
 Identical to defvar, just doesn't add the symbol to the boundp
-list."
-  (names--convert-defvar form :dont-add))
+list. And maybe use a :group."
+  (names--maybe-append-group
+   (names--convert-defvar form :dont-add)))
 
 (defun names--convert-define-derived-mode (form)
   "Special treatment for `define-derived-mode' FORM."
@@ -784,11 +841,16 @@ list."
                  (intern (format "%s-map" name)))
     (add-to-list 'names--bound
                  (intern (format "%s-hook" name)))
-    (names--macro-args-using-edebug
-     (cons
-      (car form)
-      (cons (names--prepend name)
-            (cddr form))))))
+    (append
+     (names--maybe-append-group
+      ;; And here we namespace it.
+      (list
+       (car form)
+       (names--prepend name)
+       (nth 2 form)
+       (names-convert-form (nth 3 form))
+       (names-convert-form (nth 4 form))))
+     (mapcar #'names-convert-form (cddr form)))))
 
 (defun names--convert-define-minor-mode (form)
   "Special treatment for `define-minor-mode' FORM."
@@ -803,17 +865,56 @@ list."
         (add-to-list 'names--bound (intern (format "%s-map" name)))
       (when (setq keymap (names--remove-namespace keymap))
         (add-to-list 'names--bound keymap)))
-    ;; And here we namespace it.
-    (cons
-     (car form)
-     (cons (names--prepend name)
-           (mapcar #'names-convert-form (cddr form))))))
+    (append
+     (names--maybe-append-group
+      ;; And here we namespace it.
+      (list
+       (car form)
+       (names--prepend name)
+       (nth 2 form)
+       (names-convert-form (nth 3 form))
+       (names-convert-form (nth 4 form))
+       (names-convert-form (nth 5 form))
+       (names-convert-form (nth 6 form))))
+     (mapcar #'names-convert-form (cddr form)))))
+
+(defun names--convert-define-globalized-minor-mode (form)
+  "Special treatment for `define-minor-mode' FORM.
+The NAME of the global mode will NOT be namespaced, despite being
+a definition. It is kept verbatim.
+This is because people tend to name their global modes as
+`global-foo-mode', and namespacing would make this impossible.
+
+The MODE and TURN-ON arguments are converted as function names.
+Everything else is converted as regular forms (which usually
+means no conversion will happen since it's usually keywords and
+quoted symbols)."
+  (let ((name (names--remove-namespace (cadr form)))
+        (copy (copy-list form)))
+    ;; Register the mode name
+    (when name
+      (add-to-list 'names--fbound name)
+      (add-to-list 'names--bound name)
+      (add-to-list 'names--bound (intern (format "%s-hook" name))))
+    (names--maybe-append-group
+     ;; And here we namespace it.
+     (append 
+      (list
+       (pop copy)
+       (pop copy)
+       (names--handle-symbol-as-function (pop copy))
+       (names--handle-symbol-as-function (pop copy)))
+      (mapcar #'names-convert-form copy)))))
+(defalias #'names--convert-define-global-minor-mode
+  #'names--convert-define-globalized-minor-mode)
+(defalias #'names--convert-easy-mmode-define-global-mode
+  #'names--convert-define-globalized-minor-mode)
 
 (defun names--convert-quote (form)
   "Special treatment for `quote' FORM.
 When FORM is (quote argument), argument too arbitrary to be
 logically namespaced and is never parsed for namespacing
-(but see :assume-var-quote in `names--keyword-list').
+ (but see :assume-var-quote in `names--keyword-list').
 
 When FORM is (function form), a symbol is namespaced as a
 function name, a list is namespaced as a lambda form."
@@ -830,10 +931,7 @@ function name, a list is namespaced as a lambda form."
            ((and (eq this-name 'function)
                  (null (names--keyword :dont-assume-function-quote)))
             (list 'function
-                  (or (names--remove-protection kadr)
-                      (if (names--fboundp kadr)
-                          (names--prepend kadr)
-                        kadr))))
+                  (names--handle-symbol-as-function kadr)))
 
            ;; A symbol inside a regular quote should be a function, if
            ;; the user asked for that.
@@ -847,6 +945,11 @@ function name, a list is namespaced as a lambda form."
 
            (t form))
         form))))
+
+(defun names--handle-symbol-as-function (s)
+  "Namespace symbol S as a function name."
+  (or (names--remove-protection s)
+      (if (names--fboundp s) (names--prepend s) s)))
 
 (defalias 'names--convert-function 'names--convert-quote)
 
