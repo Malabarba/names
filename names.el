@@ -152,11 +152,11 @@ namespace.")
 (defvar names--inside-make-autoload nil
   "Used in `make-autoload' to indicate to `define-namespace' that we're generating autoloads.")
 
-(defvar names--group nil 
+(defvar names--group nil
   "The name to be given to `defgroup'.
 Is only non-nil if the :group keyword is passed to `define-namespace'.")
 
-(defvar names--group-parent nil 
+(defvar names--group-parent nil
   "The name of the parent to be given to `defgroup'.
 Is only non-nil if the :group keyword is passed to `define-namespace'.")
 
@@ -389,13 +389,13 @@ See `define-namespace' for more information."
 (defun names--reload-if-upgraded ()
   "Verify if there's a more recent version of Names in the `load-path'.
 If so, evaluate it."
-  (ignore-errors 
+  (ignore-errors
     (let ((lp (expand-file-name (find-library-name "names")))
           new-version)
       (when (and lp
                  (not (string= lp names--load-file))
                  (file-readable-p lp))
-        (with-temp-buffer  
+        (with-temp-buffer
           (insert-file-contents-literally lp)
           (goto-char (point-min))
           (setq new-version
@@ -617,7 +617,7 @@ returns nil."
     (while (progn
              (and (symbolp indirect)
                   (setq indirect
-                        (names--function-get 
+                        (names--function-get
                          indirect 'edebug-form-spec 'macro))))
       ;; (edebug-trace "indirection: %s" edebug-form-spec)
       (setq spec indirect))
@@ -664,7 +664,7 @@ phenomenally. So we hack into edebug instead."
 (defvar names--message-backup (symbol-function 'message)
   "Where names stores `message's definition while overriding it.")
 
-(defvar names--verbose nil 
+(defvar names--verbose nil
   "If non-nil, verbose message are printed regardless of the :verbose keyword.
 Use this to easily turn on verbosity during tests.")
 
@@ -938,7 +938,7 @@ quoted symbols)."
       (add-to-list 'names--bound (intern (format "%s-hook" name))))
     (names--maybe-append-group
      ;; And here we namespace it.
-     (append 
+     (append
       (list
        (pop copy)
        (pop copy)
