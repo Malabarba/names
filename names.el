@@ -188,7 +188,7 @@ Is only non-nil if the :group keyword is passed to `define-namespace'.")
     (:dont-assume-function-quote
      0 nil
      "Indicate symbols quoted with `function' should NOT be considered function names.")
-    
+
     (:group
      1
      (lambda (x)
@@ -209,7 +209,13 @@ the group's name, and the `cdr' is the group's parent.
 
 If this keyword is provided, besides including a defgroup, Names
 will also include a :group keyword in every `defcustom' (and
-similar forms) that don't already contain one."))
+similar forms) that don't already contain one.")
+    (:clean-output
+     0 nil
+     "Indicate only forms actually inside the namespace should be present in the output.
+This is for internal use. It is used by `names-eval-defun' to
+prevent `define-namespace' from adding things like `defgroup' or
+`defconst's to the output."))
   "List of keywords used by `define-namespace'.
 Each element is a list containing
     (KEYWORD N DEFINITION DOCUMENTATION)
@@ -353,7 +359,8 @@ See `define-namespace' for more information."
               (cons
                'progn
                (append
-                (when names--group
+                (when (and names--group
+                           (null (names--keyword :clean-output)))
                   (list (names--generate-defgroup)))
                 (mapcar 'names-convert-form
                         ;; Unless we're in `make-autoload', then just return autoloads.

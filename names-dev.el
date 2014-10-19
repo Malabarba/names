@@ -116,10 +116,10 @@ Argument EDEBUG-IT is the same as `eval-defun'."
           (mapc
            (lambda (it) (pp it (current-buffer)))
            (cdr (macroexpand
-                 `(define-namespace ,name :global ,@keylist ,form)))))
+                 `(define-namespace ,name :global :clean-output ,@keylist ,form)))))
         (font-lock-ensure)
         (eval-defun edebug-it))
-      ;; Kill it if we won't need it.
+      ;; Kill the buffer if we won't need it.
       (unless edebug-it
         (kill-buffer b)))))
 
