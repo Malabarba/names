@@ -31,8 +31,6 @@
 ;; GNU General Public License for more details.
 ;;
 
-;;; Change Log:
-;; 0.1a - 2014/07/18 - Created File.
 ;;; Code:
 
 (require 'names)
@@ -94,6 +92,7 @@ Argument EDEBUG-IT is the same as `eval-defun'."
                      (error nil)))
              (cdr (read (current-buffer))))))
         form b keylist spec)
+    
     ;; If we're not in a namespace, call the regular `eval-defun'.
     (if (null body)
         (eval-defun edebug-it)
