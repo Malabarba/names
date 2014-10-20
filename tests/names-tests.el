@@ -217,10 +217,45 @@
                     collect x)
               nil)))))
 
+(defvar macro-file (expand-file-name "./macro-test-aux.el"))
+
 (ert-deftest macro-expansion ()
   "Test macros work."
   (setq byte-compile-error-on-warn t)
-  (byte-compile-file (expand-file-name "./macro-test-aux.el"))
+  (byte-compile-file macro-file)
   (require 'macro-test-aux)
   (should
    (equal (test-message) '("4" "3" "2" "1"))))
+
+(names-deftest version
+  "Test :version."
+  (:version
+   "1.2" :package aim
+   (defun foo () (let ((c b)) c)))
+  ((defconst a-version "1.2" "Version of the aim package.")
+   (defun a-version () "Version of the aim package." (interactive) "1.2")
+   (defun a-foo () (let ((c b)) c)))
+  (:version
+   "1.2"
+   (defun foo () (let ((c b)) c)))
+  ((defconst a-version "1.2" "Version of the a package.")
+   (defun a-version () "Version of the a package." (interactive) "1.2")
+   (defun a-foo () (let ((c b)) c))))
+
+(names-deftest group
+  "Test :version."
+  (:group
+   indent :package aim
+   (defcustom hi 1 "hi" :type 'boolean :group 'names-tests :package-version '(names-tests . ""))
+   (defcustom ok 1 "hi" :type 'boolean :package-version '(names-tests . "")))
+  ((defgroup aim nil "Customization group for aim." :prefix "a-" :group 'indent)
+   (defcustom a-hi 1 "hi" :type 'boolean :group 'names-tests :package-version '(names-tests . ""))
+   (defcustom a-ok 1 "hi" :type 'boolean :package-version '(names-tests . "") :group 'aim))
+  (:group
+   indent
+   (defcustom hi 1 "hi" :type 'boolean :group 'names-tests :package-version '(names-tests . ""))
+   (defcustom ok 1 "hi" :type 'boolean :package-version '(names-tests . "")))
+  ((defgroup a nil "Customization group for a." :prefix "a-" :group 'indent)
+   (defcustom a-hi 1 "hi" :type 'boolean :group 'names-tests :package-version '(names-tests . ""))
+   (defcustom a-ok 1 "hi" :type 'boolean :package-version '(names-tests . "") :group 'a)))
+

@@ -31,6 +31,7 @@
 ;;
 
 ;;; Change Log:
+;; 0.5.2 - 2014/10/20 - Add :version and :package keywords.
 ;; 0.5.1 - 2014/10/16 - Add the :group keyword.
 ;; 0.5   - 2014/05/20 - First Release.
 ;;; Code:
@@ -143,7 +144,8 @@ namespace.")
 
 (defvar names--var-list
   '(names--name names--regexp names--bound
-                names--group names--group-parent
+                names--version
+                names--package names--group-parent
                 names--macro names--current-run
                 names--fbound names--keywords
                 names--local-vars names--protection)
@@ -152,16 +154,66 @@ namespace.")
 (defvar names--inside-make-autoload nil
   "Used in `make-autoload' to indicate to `define-namespace' that we're generating autoloads.")
 
-(defvar names--group nil
-  "The name to be given to `defgroup'.
-Is only non-nil if the :group keyword is passed to `define-namespace'.")
+(defvar names--package nil
+  "Package, name to be used by the :group and :version keywords.
+Is derived from `load-file-name', unless the :package keyword is
+passed to `define-namespace'.")
 
 (defvar names--group-parent nil
   "The name of the parent to be given to `defgroup'.
 Is only non-nil if the :group keyword is passed to `define-namespace'.")
 
+(defvar names--version nil 
+  "The version number given by :version.
+Used to define a constant and a command.")
+
 (defconst names--keyword-list
-  '((:protection
+  '((:group
+     1 (lambda (x)
+         (if (symbolp x)
+             (setq names--group-parent x)
+           (names--warn
+            "Argument given to :group is not a symbol: %s" x)))
+     "Indicate `define-namespace' should make a `defgroup' for you.
+The name of the group is the package name (see :package keyword).
+This keyword should be given one argument, the name of the PARENT
+group as an unquoted symbol.
+
+If this keyword is provided, besides including a defgroup, Names
+will also include a :group keyword in every `defcustom' (and
+similar forms) that don't already contain one.")
+    
+    (:version
+     1
+     (lambda (x)
+       (if (stringp x)
+           (setq names--version x)
+         (names--warn
+          "Argument given to :version is not a string: %s" x)))
+     "Indicate `define-namespace' should define the version number.
+This keyword should be given one argument, a string describing
+the package's version number.
+
+With this, Names will generate a `defconst' and an interactive
+`defun', each named `PACKAGE-NAME-version'. The function messages
+and returns the version number. See the :package keyword.")
+
+    (:package
+     1
+     (lambda (x)
+       (if (symbolp x)
+           (setq names--package x)
+         (names--warn
+          "Argument given to :package is not a symbol: %s" x)))
+     "Set the name of this package to the given symbol.
+This keyword should be given one argument, a symbol corresponding
+to the name of this package.
+
+If this keyword isn't used, the package name is taken as the the
+file's basename, but only if its actually needed. This name is
+needed by the :version and :group keywords.")
+
+    (:protection
      1
      (lambda (x)
        (let ((val (symbol-name x)))
@@ -189,27 +241,6 @@ Is only non-nil if the :group keyword is passed to `define-namespace'.")
      0 nil
      "Indicate symbols quoted with `function' should NOT be considered function names.")
 
-    (:group
-     1
-     (lambda (x)
-       (if (symbolp x)
-           (let ((name (symbol-name names--name)))
-             (setq names--group
-                   (intern (substring name 0 (1- (length name)))))
-             (setq names--group-parent x))
-         (setq names--group (car x))
-         (setq names--group-parent (cdr x))))
-     "Indicate `define-namespace' should make a `defgroup' for you.
-The name of the group is derived from the namespace name, by
-removing the last character from it.
-This keyword should be given one argument, the name of the parent
-group as an unquoted symbol.
-Alternatively, the argument can be a cons cell. Then the `car' is
-the group's name, and the `cdr' is the group's parent.
-
-If this keyword is provided, besides including a defgroup, Names
-will also include a :group keyword in every `defcustom' (and
-similar forms) that don't already contain one.")
     (:clean-output
      0 nil
      "Indicate only forms actually inside the namespace should be present in the output.
@@ -342,7 +373,7 @@ See `define-namespace' for more information."
                (names--filter-if-bound byte-compile-macro-environment (lambda (x) (not (names--compat-macrop x))))
                (names--filter-if-bound byte-compile-function-environment (lambda (x) (not (names--compat-macrop x))))))
              names--keywords names--local-vars key-and-args
-             names--group names--group-parent)
+             names--version names--package names--group-parent)
         ;; Read keywords
         (while (setq key-and-args (names--next-keyword body))
           (names--handle-keyword key-and-args)
@@ -359,9 +390,13 @@ See `define-namespace' for more information."
               (cons
                'progn
                (append
-                (when (and names--group
+                (when (and names--group-parent
                            (null (names--keyword :clean-output)))
                   (list (names--generate-defgroup)))
+                (when (and names--version
+                           (null (names--keyword :clean-output)))
+                  ;; `names--generate-version' returns a list.
+                  (names--generate-version))
                 (mapcar 'names-convert-form
                         ;; Unless we're in `make-autoload', then just return autoloads.
                         (if names--inside-make-autoload
@@ -458,12 +493,38 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
 
 ;;; ---------------------------------------------------------------
 ;;; Some auxiliary functions
+(defun names--package-name ()
+  "Return the package name as a symbol.
+Decide package name based on several factors. In order:
+    1. The :package keyword,
+    2. The namespace NAME, removing the final char."
+  (or names--package
+      (let ((package (symbol-name names--name)))
+        (prog1 (setq names--package
+                     (intern (substring package 0 -1)))
+          (names--warn "No :package given. Guessing `%s'" 
+                       names--package)))))
+
 (defun names--generate-defgroup ()
   "Return a `defgroup' form for the current namespace."
-  (list 'defgroup names--group nil
-        (format "Customization group for %s." names--group)
+  (list 'defgroup (names--package-name) nil
+        (format "Customization group for %s." (names--package-name))
         :prefix (symbol-name names--name)
         :group `',names--group-parent))
+
+(defun names--generate-version ()
+  "Return a `defun' and a `defconst' forms declaring the package version.
+Also adds `version' to `names--fbound' and `names--bound'."
+  (add-to-list 'names--fbound 'version)
+  (add-to-list 'names--bound 'version)
+  (list
+   (list 'defconst (names--prepend 'version)
+         names--version
+         (format "Version of the %s package." (names--package-name)))
+   (list 'defun (names--prepend 'version) nil
+         (format "Version of the %s package." (names--package-name))
+         '(interactive)
+         names--version)))
 
 (defun names--add-macro-to-environment (form)
   "If form declares a macro, add it to "
@@ -741,13 +802,12 @@ The name is made by appending a number to PREFIX and preppending \"names\", defa
       (edebug-move-cursor cursor))))
 
 (defun names--maybe-append-group (form)
-  "Append :group `names--group' to the form.
-Only `names--group' isn't nil and if the form doesn't already
-have a :group."
-  (if (or (null names--group)
-          (memq :group form))
+  "Append :group `names--package' to the form.
+Only if the :group keyword was passed to `define-namespace' and
+if the form doesn't already have a :group."
+  (if (or (null names--group-parent) (memq :group form))
       form
-    (append form (list :group (list 'quote names--group)))))
+    (append form `(:group ',(names--package-name)))))
 
 
 ;;; ---------------------------------------------------------------
