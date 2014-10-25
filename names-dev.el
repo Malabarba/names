@@ -117,7 +117,8 @@ Argument EDEBUG-IT is the same as `eval-defun'."
            (lambda (it) (pp it (current-buffer)))
            (cdr (macroexpand
                  `(define-namespace ,name :global :clean-output ,@keylist ,form)))))
-        (font-lock-ensure)
+        (when (fboundp 'font-lock-ensure)
+          (font-lock-ensure))
         (eval-defun edebug-it))
       ;; Kill the buffer if we won't need it.
       (unless edebug-it
