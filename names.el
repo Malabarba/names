@@ -39,6 +39,7 @@
 
 (require 'cl-lib)
 (require 'edebug)
+(require 'bytecomp)
 
 ;;; Support
 (declare-function names--autoload-do-load "names" 2)
