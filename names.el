@@ -425,6 +425,7 @@ See `define-namespace' for more information."
   "Verify if there's a more recent version of Names in the `load-path'.
 If so, evaluate it."
   (ignore-errors
+    (require 'find-func)
     (let ((lp (expand-file-name (find-library-name "names")))
           new-version)
       (when (and lp
