@@ -17,6 +17,10 @@
                    out))
            out)))
 
+(defadvice ert--pp-with-indentation-and-newline (around print-level activate)
+  "Display full sexp in *ert* buffer."
+  (let ((print-level nil)) ad-do-it))
+
 (names-deftest rename-defuns
   "Test that definitions are namespaced."
   ((defun foo0 () 1))
@@ -241,6 +245,20 @@
   ((defconst a-version "1.2" "Version of the a package.")
    (defun a-version () "Version of the a package." (interactive) "1.2")
    (defun a-foo () (let ((c b)) c))))
+
+(names-deftest cl-letf
+  "Test :version."
+  ((defcustom hi 1 "hi" :type 'boolean :group 'names-tests :package-version '(names-tests . ""))
+   (defun ok () nil)
+   (cl-letf ()
+     hi
+     (ok)))
+  ((defcustom a-hi 1 "hi" :type 'boolean :group 'names-tests :package-version '(names-tests . ""))
+   (defun a-ok () nil)
+   (progn
+     (cl-letf ()
+       a-hi
+       (a-ok)))))
 
 (names-deftest group
   "Test :version."
