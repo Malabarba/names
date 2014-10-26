@@ -164,7 +164,7 @@ passed to `define-namespace'.")
   "The name of the parent to be given to `defgroup'.
 Is only non-nil if the :group keyword is passed to `define-namespace'.")
 
-(defvar names--version nil 
+(defvar names--version nil
   "The version number given by :version.
 Used to define a constant and a command.")
 
@@ -183,7 +183,7 @@ group as an unquoted symbol.
 If this keyword is provided, besides including a defgroup, Names
 will also include a :group keyword in every `defcustom' (and
 similar forms) that don't already contain one.")
-    
+
     (:version
      1
      (lambda (x)
@@ -510,7 +510,7 @@ Decide package name based on several factors. In order:
       (let ((package (symbol-name names--name)))
         (prog1 (setq names--package
                      (intern (substring package 0 -1)))
-          (names--warn "No :package given. Guessing `%s'" 
+          (names--warn "No :package given. Guessing `%s'"
                        names--package)))))
 
 (defun names--generate-defgroup ()
