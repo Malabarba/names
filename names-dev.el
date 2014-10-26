@@ -91,7 +91,7 @@ Argument EDEBUG-IT is the same as `eval-defun'."
                               (names--looking-at-namespace))
                      (error nil)))
              (cdr (read (current-buffer))))))
-        form b keylist spec)
+        form b keylist spec name)
     
     ;; If we're not in a namespace, call the regular `eval-defun'.
     (if (null body)
