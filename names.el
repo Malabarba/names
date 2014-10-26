@@ -596,9 +596,10 @@ Use a letbind to indicate to `define-namespace' that we're generating autoloads.
     (apply 'message (concat "[names] " f) rest)))
 
 (defun names--warn (f &rest rest)
-  "Pass F and REST to `message', unless byte-compiling."
-  (unless (and (boundp 'byte-compile-function-environment)
-               byte-compile-function-environment)
+  "Pass F and REST to `message', unless byte-compiling or non-interactive."
+  (unless (or (and (boundp 'byte-compile-function-environment)
+                   byte-compile-function-environment)
+              (null (called-interactively-p 'any)))
     (apply 'message (concat "[names] " f) rest)))
 
 (defun names--error-if-using-vars ()
