@@ -291,6 +291,9 @@ Returns a list (KEYWORD . ARGUMENTLIST)."
             (push (pop ,body) out))
           (nreverse out))))
 
+(defvar names--has-reloaded nil
+  "Whether `names--reload-if-upgraded' has already been called in this run.")
+
 
 ;;; ---------------------------------------------------------------
 ;;; The Main Macro and Main Function.
@@ -347,9 +350,12 @@ http://github.com/Bruce-Connor/names
 \(fn NAME [KEYWORDS] BODY)"
   (declare (indent (lambda (&rest x) 0))
            (debug (&define name [&rest keywordp &optional [&or symbolp (symbolp . symbolp)]] body)))
-  (names--reload-if-upgraded)
-  (names--error-if-using-vars)
-  (names--define-namespace-implementation name body))
+  (let ((names--has-reloaded names--has-reloaded))
+    (unless names--has-reloaded
+      (setq names--has-reloaded t)
+      (names--reload-if-upgraded))
+    (names--error-if-using-vars)
+    (names--define-namespace-implementation name body)))
 
 (defun names--define-namespace-implementation (name body)
   "Namespace BODY using NAME.
