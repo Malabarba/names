@@ -169,7 +169,9 @@ to be edebugged."
 
 
 ;;; eval-last-sexp
-(require 'elisp-mode)
+(require 'elisp-mode nil t)
+(require 'lisp-mode nil t)
+
 (defalias 'names--preceding-sexp-original (symbol-function 'elisp--preceding-sexp))
 
 (defun names--preceding-sexp ()
@@ -198,7 +200,7 @@ Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
 
 
 ;;; Find stuff
-(require 'find-func)
+(require 'find-func nil t)
 (defalias 'names--fboundp-original (symbol-function 'fboundp))
 (defalias 'names--boundp-original (symbol-function 'boundp))
 (defalias 'names--find-function-read-original (symbol-function 'find-function-read))
