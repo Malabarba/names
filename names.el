@@ -4,7 +4,7 @@
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
-;; Version: 0.5.2
+;; Version: 0.5.3
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords:
 ;; Prefix: names
@@ -39,7 +39,7 @@
 
 (require 'cl-lib)
 (require 'edebug)
-(require 'bytecomp)
+;; (require 'bytecomp)
 
 ;;; Support
 (declare-function names--autoload-do-load "names" 2)
@@ -104,10 +104,11 @@ it will set PROP."
                  "return"] form]
            ;; Simple default, which covers 99% of the cases.
            symbolp form)))
+
 
 ;;; ---------------------------------------------------------------
 ;;; Variables
-(defconst names-version "0.5.2" "Version of the names.el package.")
+(defconst names-version "0.5.3" "Version of the names.el package.")
 
 (defvar names--name nil
   "Name of the current namespace inside the `define-namespace' macro.")
@@ -416,11 +417,13 @@ See `define-namespace' for more information."
         ;; namespace is a single top-level form (we return a `progn').
         ;; The solution is for us to add the macros to
         ;; `byte-compile-macro-environment' ourselves.
-        (if (and byte-compile-current-buffer
+        (if (and (boundp 'byte-compile-current-buffer)
+                 byte-compile-current-buffer
                  (null names--inside-make-autoload)
                  (version< emacs-version "24.4"))
             (let ((byte-compile-macro-environment
-                   byte-compile-macro-environment))
+                   (when (boundp 'byte-compile-macro-environment)
+                     byte-compile-macro-environment)))
               (mapc #'names--add-macro-to-environment (cdr body))
               (macroexpand-all body byte-compile-macro-environment))
           body))
@@ -535,7 +538,7 @@ Also adds `version' to `names--fbound' and `names--bound'."
          names--version)))
 
 (defun names--add-macro-to-environment (form)
-  "If form declares a macro, add it to "
+  "If form declares a macro, add it to `byte-compile-macro-environment'."
   (let ((expansion form))
     (while (names--compat-macrop (car-safe expansion))
       (setq expansion
