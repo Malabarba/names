@@ -196,7 +196,36 @@ Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
 
 ;; (pp (symbol-function 'names-eval-defun) (current-buffer))
 
+
+;;; Find stuff
+(require 'find-func)
+(defalias 'names--fboundp-original (symbol-function 'fboundp))
+(defalias 'names--boundp-original (symbol-function 'boundp))
+(defalias 'names--find-function-read-original (symbol-function 'find-function-read))
+(defalias 'find-function-read 'names--find-function-read)
 
+(defun names--find-function-read (&optional type)
+  "Identical to `eval-print-last-sexp', except it works for forms inside namespaces.
+Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
+  (interactive "P")
+  (let ((buf (current-buffer)))
+    (names--wrapped-in-namespace
+      (names--find-function-read-original type) nil t
+      (set-buffer buf)
+      (let ((names--name name))
+        (cl-letf (((symbol-function 'fboundp) #'names--dev-fboundp)
+                  ((symbol-function 'boundp) #'names--dev-boundp))
+          (names--find-function-read-original type))))))
+
+(defun names--dev-fboundp (sym)
+  (or (names--fboundp-original sym)
+      (names--fboundp-original (names--prepend sym))))
+(defun names--dev-boundp (sym)
+  (or (names--boundp-original sym)
+      (names--boundp-original (names--prepend sym))))
+
+
+;;; The keys
 (eval-after-load 'lisp-mode
   '(let ((map emacs-lisp-mode-map))
      (define-key map [remap eval-defun] #'names-eval-defun)
