@@ -75,63 +75,17 @@ correctly."
        (and (boundp 'lisp-el-font-lock-keywords-2)
             lisp-el-font-lock-keywords-2)))
 
-(defun names-eval-defun (edebug-it)
-  "Identical to `eval-defun', except it works for forms inside namespaces.
-Argument EDEBUG-IT is the same as `eval-defun'."
-  (interactive "P")
-  (require 'font-lock) ; just in case
-  ;; Get the namespace, if we're in one.
-  (let ((body
-         (save-excursion
-           (when (progn
-                   (end-of-defun)
-                   (beginning-of-defun)
-                   (condition-case nil
-                       (progn (backward-up-list)
-                              (names--looking-at-namespace))
-                     (error nil)))
-             (cdr (read (current-buffer))))))
-        form b keylist spec name)
-    
-    ;; If we're not in a namespace, call the regular `eval-defun'.
-    (if (null body)
-        (eval-defun edebug-it)
-      ;; If we are, expand the function in a temp buffer
-      (setq name (pop body))
-      (while (setq spec (names--next-keyword body))
-        (setq keylist
-              (append keylist spec)))
-      (setq form
-            (save-excursion
-              (end-of-defun)
-              (beginning-of-defun)
-              (read (current-buffer))))
-      ;; Prepare the (possibly) temporary buffer.
-      (setq b (names--generate-new-buffer name form))
-      (with-current-buffer b
-        (erase-buffer)
-        (emacs-lisp-mode)
-        (save-excursion
-          ;; Print everything inside the `progn'.
-          (mapc
-           (lambda (it) (pp it (current-buffer)))
-           (cdr (macroexpand
-                 `(define-namespace ,name :global :clean-output ,@keylist ,form)))))
-        (when (fboundp 'font-lock-ensure)
-          (font-lock-ensure))
-        (eval-defun edebug-it))
-      ;; Kill the buffer if we won't need it.
-      (unless edebug-it
-        (kill-buffer b)))))
 
+
+;;; The backbone
 (defun names--looking-at-namespace ()
   "Non-nil if point is at a `define-namespace' form or an alias to it."
   (when (looking-at "(\\_<")
     (save-excursion
       (forward-char 1)
       (ignore-errors
-        (equal (symbol-function (intern (thing-at-point 'symbol)))
-               (symbol-function 'define-namespace))))))
+        (equal (indirect-function (intern (thing-at-point 'symbol)))
+               (indirect-function 'define-namespace))))))
 
 (defun names--generate-new-buffer (name &optional form)
   "Generate and return a new buffer.
@@ -146,8 +100,108 @@ buffer name."
             (or (car-safe (cdr-safe form)) (random 10000)))
     "*")))
 
+(defmacro names--wrapped-in-namespace (command form &optional kill &rest body)
+  "Call COMMAND, except in a namespace.
+In a namespace, expand FORM in a separate buffer then execute
+BODY. If BODY is nil, call COMMAND instead.
+If KILL is non-nil, kill the temp buffer afterwards."
+  (declare (indent defun)
+           (debug (sexp form form body)))
+  ;; Get the namespace, if we're in one.
+  `(let ((evaled-form ,form)
+         (invocation
+          ',(if (commandp command t)
+                `(call-interactively #',command)
+              command))
+         (entire-namespace
+          (save-excursion
+            (when (progn
+                    (end-of-defun)
+                    (beginning-of-defun)
+                    (ignore-errors
+                      (backward-up-list)
+                      (names--looking-at-namespace)))
+              (cdr (read (current-buffer))))))
+         b keylist spec name expanded-form)
+
+     ;; If we're not in a namespace, call the regular `eval-defun'.
+     (if (null entire-namespace)
+         (eval invocation)
+       ;; If we are, expand the function in a temp buffer
+       (setq name (pop entire-namespace))
+       (while (setq spec (names--next-keyword entire-namespace))
+         (setq keylist (append keylist spec)))
+       ;; Prepare the (possibly) temporary buffer.
+       (setq b (names--generate-new-buffer name evaled-form))
+       (unwind-protect
+           (with-current-buffer b
+             (cl-letf (((symbol-function #'message) #'ignore))
+               (erase-buffer)
+               (emacs-lisp-mode)
+               ;; Print everything inside the `progn'.
+               (mapc
+                (lambda (it) (pp it (current-buffer)))
+                (cdr
+                 (setq expanded-form
+                       (macroexpand
+                        `(define-namespace ,name :global :clean-output ,@keylist ,evaled-form)))))
+               (when (fboundp 'font-lock-ensure)
+                 (font-lock-ensure)))
+             ;; Return value
+             ,@(or body '((eval invocation))))
+         ;; Kill the buffer if we won't need it.
+         (when (and ,kill (buffer-live-p b))
+           (kill-buffer b))))))
+
+(defun names-eval-defun (edebug-it)
+  "Identical to `eval-defun', except it works for forms inside namespaces.
+Argument EDEBUG-IT is the same as `eval-defun', causes the form
+to be edebugged."
+  (interactive "P")
+  (require 'font-lock) ; just in case
+  (let ((form
+         (save-excursion
+           (end-of-defun)
+           (beginning-of-defun)
+           (read (current-buffer)))))
+    (names--wrapped-in-namespace 
+      eval-defun form (null edebug-it))))
+
+
+;;; eval-last-sexp
+(require 'elisp-mode)
+(defalias 'names--preceding-sexp-original (symbol-function 'elisp--preceding-sexp))
+
+(defun names--preceding-sexp ()
+  "Like `elisp--preceding-sexp', but expand namespaces."
+  (names--wrapped-in-namespace
+    (names--preceding-sexp-original) (names--preceding-sexp-original) t 
+    expanded-form))
+
+(defun names-eval-last-sexp (eval-last-sexp-arg-internal)
+  "Identical to `eval-last-sexp', except it works for forms inside namespaces.
+Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-last-sexp'."
+  (interactive "P")
+  (cl-letf (((symbol-function 'elisp--preceding-sexp)
+             #'names--preceding-sexp))
+    (eval-last-sexp eval-last-sexp-arg-internal)))
+
+(defun names-eval-print-last-sexp (eval-last-sexp-arg-internal)
+  "Identical to `eval-print-last-sexp', except it works for forms inside namespaces.
+Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
+  (interactive "P")
+  (cl-letf (((symbol-function 'elisp--preceding-sexp)
+             #'names--preceding-sexp))
+    (eval-print-last-sexp eval-last-sexp-arg-internal)))
+
+;; (pp (symbol-function 'names-eval-defun) (current-buffer))
+
+
 (eval-after-load 'lisp-mode
-  '(define-key emacs-lisp-mode-map [remap eval-defun] #'names-eval-defun))
+  '(let ((map emacs-lisp-mode-map))
+     (define-key map [remap eval-defun] #'names-eval-defun)
+     (define-key map [remap eval-last-sexp] #'names-eval-last-sexp)
+     (define-key map [remap eval-print-last-sexp] #'names-eval-print-last-sexp)))
 
 (provide 'names-dev)
 ;;; names-dev.el ends here.
