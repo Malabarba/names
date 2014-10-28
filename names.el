@@ -40,6 +40,7 @@
 (require 'cl-lib)
 (require 'edebug)
 (require 'bytecomp)
+(require 'advice)
 
 ;;; Support
 (declare-function names--autoload-do-load "names" 2)
@@ -746,7 +747,10 @@ phenomenally. So we hack into edebug instead."
       form)
      form)))
 
-(defvar names--message-backup (symbol-function 'message)
+(defvar names--message-backup
+  (if (ad-is-advised 'message)
+      (ad-get-orig-definition 'message)
+    (symbol-function 'message))
   "Where names stores `message's definition while overriding it.")
 
 (defvar names--verbose nil
