@@ -727,6 +727,7 @@ phenomenally. So we hack into edebug instead."
               (names--is-inside-macro form))
           (cl-letf
               ;; Prevent excessive messaging.
+              ;; TODO: Don't do this if `message' is advised.
               (((symbol-function 'message) #'names--edebug-message)
                ;; Older edebugs have poor `get-edebug-spec'.
                ((symbol-function 'get-edebug-spec) #'names--get-edebug-spec)
