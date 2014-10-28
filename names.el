@@ -39,7 +39,7 @@
 
 (require 'cl-lib)
 (require 'edebug)
-;; (require 'bytecomp)
+(require 'bytecomp)
 
 ;;; Support
 (declare-function names--autoload-do-load "names" 2)
@@ -352,6 +352,8 @@ http://github.com/Bruce-Connor/names
   (declare (indent (lambda (&rest x) 0))
            (debug (&define name [&rest keywordp &optional [&or symbolp (symbolp . symbolp)]] body)))
   (let ((names--has-reloaded names--has-reloaded))
+    ;; This was to avoid an infinite recursion, but the bug turned out
+    ;; to be somewhere else. Still, I see no reason to erase this.
     (unless names--has-reloaded
       (setq names--has-reloaded t)
       (names--reload-if-upgraded))
