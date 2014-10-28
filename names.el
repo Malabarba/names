@@ -570,13 +570,15 @@ Also adds `version' to `names--fbound' and `names--bound'."
 (defadvice make-autoload (before names-before-make-autoload-advice
                                  (form file &optional expansion) activate)
   "Make sure `make-autoload' understands `define-namespace'.
-Use a letbind to indicate to `define-namespace' that we're generating autoloads."
-  (let ((names--inside-make-autoload t)
-        space)
-    (when (eq (car-safe form) 'define-namespace)
-      (setq space (macroexpand form))
-      (ad-set-arg 0 space)
-      (ad-set-arg 2 'expansion))))
+Use the `names--inside-make-autoload' variable to indicate to
+`define-namespace' that we're generating autoloads."
+  ;; We used to have a letbind here, but this was causing a weird void
+  ;; variable bug on Emacs 24.3.
+  (setq names--inside-make-autoload t)
+  (when (eq (car-safe form) 'define-namespace)
+    (ad-set-arg 0 (macroexpand form))
+    (ad-set-arg 2 'expansion))
+  (setq names--inside-make-autoload nil))
 
 (defvar names--ignored-forms '(declare)
   "The name of functions/macros/special-forms which we return without reading.")
