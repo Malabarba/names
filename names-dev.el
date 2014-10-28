@@ -34,6 +34,8 @@
 ;;; Code:
 
 (require 'names)
+(require 'elisp-mode nil t)
+(require 'lisp-mode nil t)
 
 
 ;;; ---------------------------------------------------------------
@@ -74,7 +76,6 @@ correctly."
        names-font-lock
        (and (boundp 'lisp-el-font-lock-keywords-2)
             lisp-el-font-lock-keywords-2)))
-
 
 
 ;;; The backbone
@@ -169,9 +170,6 @@ to be edebugged."
 
 
 ;;; eval-last-sexp
-(require 'elisp-mode nil t)
-(require 'lisp-mode nil t)
-
 (defalias 'names--preceding-sexp-original (symbol-function 'elisp--preceding-sexp))
 
 (defun names--preceding-sexp ()
