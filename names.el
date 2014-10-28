@@ -723,24 +723,24 @@ phenomenally. So we hack into edebug instead."
       (with-temp-buffer
         (pp form 'insert)
         (goto-char (point-min))
-        (let ((edebug-all-forms t)
-              (edebug-all-defs t)
-              (names--is-inside-macro form))
-          (cl-letf
-              ;; Prevent excessive messaging.
-              ;; TODO: Don't do this if `message' is advised.
-              (((symbol-function 'message) #'names--edebug-message)
-               ;; Older edebugs have poor `get-edebug-spec'.
-               ((symbol-function 'get-edebug-spec) #'names--get-edebug-spec)
-               ;; Give symbols our own name.
-               ((symbol-function 'cl-gensym) #'names--gensym)
-               ;; Stop at one level deep.
-               ((symbol-function 'edebug-form) #'names--edebug-form)
-               ;; Don't actually wrap anything.
-               ((symbol-function 'edebug-make-enter-wrapper)
-                #'names--edebug-make-enter-wrapper))
-            ;; Do the magic!
-            (edebug-read-top-level-form))))
+        (cl-letf
+            ((edebug-all-forms t)
+             (edebug-all-defs t)
+             (names--is-inside-macro form)
+             ;; Prevent excessive messaging.
+             ;; TODO: Don't do this if `message' is advised.
+             ((symbol-function 'message) #'names--edebug-message)
+             ;; Older edebugs have poor `get-edebug-spec'.
+             ((symbol-function 'get-edebug-spec) #'names--get-edebug-spec)
+             ;; Give symbols our own name.
+             ((symbol-function 'cl-gensym) #'names--gensym)
+             ;; Stop at one level deep.
+             ((symbol-function 'edebug-form) #'names--edebug-form)
+             ;; Don't actually wrap anything.
+             ((symbol-function 'edebug-make-enter-wrapper)
+              #'names--edebug-make-enter-wrapper))
+          ;; Do the magic!
+          (edebug-read-top-level-form)))
     (invalid-read-syntax
      (names--warn
       "Couldn't namespace this macro using its (debug ...) declaration: %s"
