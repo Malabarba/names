@@ -69,6 +69,15 @@ Font-lock for =define-namespace= and =:autoload=.
 =names-compare-forms= and =names-print= offer information when
 something just doesn't seem to make sense.
 
+** Nomenclature
+
+The name of this package is *Names*, always with a capital “N”.
+Despite the word being plural, refer to it in the singular (e.g.,
+“Names is an amazing achievement”). If possible consider giving it a
+slight emphasis, such as: /Names/.
+When there's a risk of confusion or ambiguity, be it due to context or
+lack of knowledge by the reader, =names.el= is also acceptable.
+
 ** Why a namespace package?
 Plain and simple: Emacs doesn't have namespaces, and it needs them.
 
