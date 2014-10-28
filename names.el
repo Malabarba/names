@@ -6,7 +6,7 @@
 ;; URL: http://github.com/Bruce-Connor/names
 ;; Version: 0.5.4
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
-;; Keywords:
+;; Keywords: extensions lisp
 ;; Prefix: names
 ;; Separator: -
 
