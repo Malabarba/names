@@ -154,8 +154,9 @@ namespace.")
                 names--local-vars names--protection)
   "List of variables the user shouldn't touch.")
 
+;;;###autoload
 (defvar names--inside-make-autoload nil
-  "Used in `make-autoload' to indicate to `define-namespace' that we're generating autoloads.")
+  "Used in `make-autoload' to indicate we're making autoloads.")
 
 (defvar names--package nil
   "Package, name to be used by the :group and :version keywords.
