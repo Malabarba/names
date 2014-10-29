@@ -6,7 +6,7 @@
 ;; URL: http://github.com/Bruce-Connor/names
 ;; Version: 0.5.4
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
-;; Keywords:
+;; Keywords: extensions lisp
 ;; Prefix: names
 ;; Separator: -
 
@@ -40,6 +40,7 @@
 (require 'cl-lib)
 (require 'edebug)
 (require 'bytecomp)
+(require 'advice)
 
 ;;; Support
 (declare-function names--autoload-do-load "names" 2)
@@ -722,31 +723,34 @@ phenomenally. So we hack into edebug instead."
       (with-temp-buffer
         (pp form 'insert)
         (goto-char (point-min))
-        (let ((edebug-all-forms t)
-              (edebug-all-defs t)
-              (names--is-inside-macro form))
-          (cl-letf
-              ;; Prevent excessive messaging.
-              ;; TODO: Don't do this if `message' is advised.
-              (((symbol-function 'message) #'names--edebug-message)
-               ;; Older edebugs have poor `get-edebug-spec'.
-               ((symbol-function 'get-edebug-spec) #'names--get-edebug-spec)
-               ;; Give symbols our own name.
-               ((symbol-function 'cl-gensym) #'names--gensym)
-               ;; Stop at one level deep.
-               ((symbol-function 'edebug-form) #'names--edebug-form)
-               ;; Don't actually wrap anything.
-               ((symbol-function 'edebug-make-enter-wrapper)
-                #'names--edebug-make-enter-wrapper))
-            ;; Do the magic!
-            (edebug-read-top-level-form))))
+        (cl-letf
+            ((edebug-all-forms t)
+             (edebug-all-defs t)
+             (names--is-inside-macro form)
+             ;; Prevent excessive messaging.
+             ;; TODO: Don't do this if `message' is advised.
+             ((symbol-function 'message) #'names--edebug-message)
+             ;; Older edebugs have poor `get-edebug-spec'.
+             ((symbol-function 'get-edebug-spec) #'names--get-edebug-spec)
+             ;; Give symbols our own name.
+             ((symbol-function 'cl-gensym) #'names--gensym)
+             ;; Stop at one level deep.
+             ((symbol-function 'edebug-form) #'names--edebug-form)
+             ;; Don't actually wrap anything.
+             ((symbol-function 'edebug-make-enter-wrapper)
+              #'names--edebug-make-enter-wrapper))
+          ;; Do the magic!
+          (edebug-read-top-level-form)))
     (invalid-read-syntax
      (names--warn
       "Couldn't namespace this macro using its (debug ...) declaration: %s"
       form)
      form)))
 
-(defvar names--message-backup (symbol-function 'message)
+(defvar names--message-backup
+  (if (ad-is-advised 'message)
+      (ad-get-orig-definition 'message)
+    (symbol-function 'message))
   "Where names stores `message's definition while overriding it.")
 
 (defvar names--verbose nil
