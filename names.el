@@ -990,7 +990,7 @@ list. And maybe use a :group."
     (add-to-list 'names--bound name)
     (add-to-list 'names--bound (intern (format "%s-hook" name)))
     ;; Register the keymap
-    (if (null (symbolp keymap))
+    (if (or (null keymap) (null (symbolp keymap)))
         (add-to-list 'names--bound (intern (format "%s-map" name)))
       (when (setq keymap (names--remove-namespace keymap))
         (add-to-list 'names--bound keymap)))
