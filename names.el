@@ -1008,7 +1008,7 @@ list. And maybe use a :group."
      (mapcar #'names-convert-form (cddr form)))))
 
 (defun names--convert-define-globalized-minor-mode (form)
-  "Special treatment for `define-minor-mode' FORM.
+  "Special treatment for `define-globalized-minor-mode' FORM.
 The NAME of the global mode will NOT be namespaced, despite being
 a definition. It is kept verbatim.
 This is because people tend to name their global modes as
