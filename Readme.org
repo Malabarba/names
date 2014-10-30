@@ -120,5 +120,5 @@ shortest namespace possible, =s-=.
 **** latex-extra
 - *Number of ert tests passed:* ALL.
 **** aggressive-indent
-No actual tests defined, but this package actually used /Names/ for
+No actual tests defined, but this package actually uses /Names/ for
 real! And it's alive and well.
