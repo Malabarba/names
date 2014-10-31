@@ -1,7 +1,7 @@
 (byte-compile-file "aggressive-indent.el")
 (require 'package)
-(package-initialize)
 (setq package-user-dir (expand-file-name "./elpa"))
+(package-initialize)
 (when (version< emacs-version "24.3")
   (package-install-file (expand-file-name "cl-lib.el")))
 
@@ -15,12 +15,13 @@
       (insert-file-contents-literally file)
       (goto-char (point-min))
       (while (setq it (ignore-errors (read (current-buffer))))
-        (push it out)))))
+        (push it out))
+      out)))
 
 (ert-deftest compare-autoloads ()
   (let ((should-have (file-as-list "elpa/aggressive-indent-autoloads.el"))
         (do-have (file-as-list "elpa/aggressive-indent-0.1/aggressive-indent-autoloads.el")))
-    (should (string= do-have should-have))))
+    (should (equal do-have should-have))))
 
 
 
