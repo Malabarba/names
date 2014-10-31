@@ -18,8 +18,12 @@
         (push it out))
       out)))
 
+(defvar struncated-emacs-version
+  (replace-regexp-in-string "\\(....\\).*" "\\1" emacs-version)
+  "")
+
 (ert-deftest compare-autoloads ()
-  (let ((should-have (file-as-list "elpa/aggressive-indent-autoloads.el"))
+  (let ((should-have (file-as-list (format "elpa/aggressive-indent-autoloads-%s.el" struncated-emacs-version)))
         (do-have (file-as-list "elpa/aggressive-indent-0.1/aggressive-indent-autoloads.el")))
     (should (equal do-have should-have))))
 

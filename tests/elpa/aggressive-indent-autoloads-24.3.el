@@ -1,10 +1,10 @@
 ;;; aggressive-indent-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+
 
-;;;### (autoloads nil "aggressive-indent" "aggressive-indent.el"
-;;;;;;  (21568 12512 635357 112000))
+;;;### (autoloads (aggressive-indent-) "aggressive-indent" "aggressive-indent.el"
+;;;;;;  (21587 41662 658130 132000))
 ;;; Generated autoloads from aggressive-indent.el
 
 (let ((loads (get 'aggressive-indent 'custom-loads))) (if (member '"aggressive-indent" loads) nil (put 'aggressive-indent 'custom-loads (cons '"aggressive-indent" loads))))
@@ -49,9 +49,16 @@ See `aggressive-indent-mode' for more information on Aggressive-Indent mode.
 
 ;;;***
 
+;;;### (autoloads nil nil ("aggressive-indent-pkg.el") (21587 41662
+;;;;;;  753583 753000))
+
+;;;***
+
+(provide 'aggressive-indent-autoloads)
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; aggressive-indent-autoloads.el ends here
