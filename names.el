@@ -569,18 +569,25 @@ Also adds `version' to `names--fbound' and `names--bound'."
        (names--extract-autoloads (cdr (cdr acons)))))))
 
 ;;;###autoload
-(defadvice make-autoload (before names-before-make-autoload-advice
+(defadvice make-autoload (around names-before-make-autoload-advice
                                  (form file &optional expansion) activate)
   "Make sure `make-autoload' understands `define-namespace'.
 Use the `names--inside-make-autoload' variable to indicate to
 `define-namespace' that we're generating autoloads."
-  ;; We used to have a letbind here, but this was causing a weird void
+  ;; We used to have a letbind here, but this was causing a void
   ;; variable bug on Emacs 24.3.
-  (setq names--inside-make-autoload t)
-  (when (eq (car-safe form) 'define-namespace)
-    (ad-set-arg 0 (macroexpand form))
-    (ad-set-arg 2 'expansion))
-  (setq names--inside-make-autoload nil))
+  (require 'names)
+  (if (null (eq (car-safe form) 'define-namespace))
+      ad-do-it
+    (setq names--inside-make-autoload t)
+    (setq form (macroexpand form))
+    (setq names--inside-make-autoload nil)
+    ;; Up to 24.2 `make-autoload' couldn't handle `progn's.
+    (if (version< emacs-version "24.3")
+        (setq ad-return-value (cons 'progn (mapcar (lambda (x) (make-autoload x file)) (cdr form))))
+      (ad-set-arg 2 'expansion)
+      (ad-set-arg 0 form)
+      ad-do-it)))
 
 (defvar names--ignored-forms '(declare)
   "The name of functions/macros/special-forms which we return without reading.")
