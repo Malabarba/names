@@ -9,4 +9,4 @@
 /tests/flycheck/
 /tests/out.tex
 /tests/elpa/aggressive-indent-0.1/
-/tests/elpa/names-0.5.2/
+/tests/elpa/names-*/
