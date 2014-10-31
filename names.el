@@ -584,10 +584,18 @@ Use the `names--inside-make-autoload' variable to indicate to
     (setq names--inside-make-autoload nil)
     ;; Up to 24.2 `make-autoload' couldn't handle `progn's.
     (if (version< emacs-version "24.3")
-        (setq ad-return-value (cons 'progn (mapcar (lambda (x) (make-autoload x file)) (cdr form))))
+        (setq ad-return-value
+              (cons 'progn
+                    (mapcar (lambda (x) (names--make-autoload-compat x file))
+                            (cdr form))))
       (ad-set-arg 2 'expansion)
       (ad-set-arg 0 form)
       ad-do-it)))
+
+(defun names--make-autoload-compat (form file)
+  (if (eq (car-safe form) 'defalias)
+      form
+    (make-autoload x file)))
 
 (defvar names--ignored-forms '(declare)
   "The name of functions/macros/special-forms which we return without reading.")
