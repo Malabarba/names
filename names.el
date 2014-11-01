@@ -761,7 +761,7 @@ Use this to easily turn on verbosity during tests.")
 (defun names--edebug-message (&rest _)
   (if (or (names--keyword :verbose) names--verbose)
       (apply names--message-backup _)
-    (apply 'format _)))
+    (when _ (apply 'format _))))
 
 (defun names--edebug-make-enter-wrapper (forms)
   (setq edebug-def-name
