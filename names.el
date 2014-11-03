@@ -595,7 +595,7 @@ Use the `names--inside-make-autoload' variable to indicate to
 (defun names--make-autoload-compat (form file)
   (if (eq (car-safe form) 'defalias)
       form
-    (make-autoload x file)))
+    (make-autoload form file)))
 
 (defvar names--ignored-forms '(declare)
   "The name of functions/macros/special-forms which we return without reading.")
