@@ -71,11 +71,10 @@ correctly."
      (1 'font-lock-keyword-face)
      (2 'font-lock-variable-name-face))))
 
-(setq lisp-el-font-lock-keywords-2
-      (append
-       names-font-lock
-       (and (boundp 'lisp-el-font-lock-keywords-2)
-            lisp-el-font-lock-keywords-2)))
+(when (boundp 'lisp-el-font-lock-keywords-2)
+  (setq lisp-el-font-lock-keywords-2
+        (append names-font-lock
+                lisp-el-font-lock-keywords-2)))
 
 
 ;;; The backbone
