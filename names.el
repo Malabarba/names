@@ -621,9 +621,9 @@ Use the `names--inside-make-autoload' variable to indicate to
 
 (defun names--warn (f &rest rest)
   "Pass F and REST to `message', unless byte-compiling or non-interactive."
-  (unless (or (and (boundp 'byte-compile-function-environment)
-                   byte-compile-function-environment)
-              (null (called-interactively-p 'any)))
+  (unless (and (null (names--keyword :verbose))
+               (and (boundp 'byte-compile-function-environment)
+                    byte-compile-function-environment))
     (apply 'message (concat "[names] " f) rest)))
 
 (defun names--error-if-using-vars ()
