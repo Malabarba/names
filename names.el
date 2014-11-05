@@ -735,33 +735,41 @@ we'd be reimplementing something that edebug already does
 phenomenally. So we hack into edebug instead."
   (require 'edebug)
   (require 'cl-lib)
-  (condition-case nil
-      (with-temp-buffer
-        (pp form 'insert)
-        (goto-char (point-min))
-        (cl-letf
-            ((edebug-all-forms t)
-             (edebug-all-defs t)
-             (names--is-inside-macro form)
-             ;; Prevent excessive messaging.
-             ;; TODO: Don't do this if `message' is advised.
-             ((symbol-function 'message) #'names--edebug-message)
-             ;; Older edebugs have poor `get-edebug-spec'.
-             ((symbol-function 'get-edebug-spec) #'names--get-edebug-spec)
-             ;; Give symbols our own name.
-             ((symbol-function 'cl-gensym) #'names--gensym)
-             ;; Stop at one level deep.
-             ((symbol-function 'edebug-form) #'names--edebug-form)
-             ;; Don't actually wrap anything.
-             ((symbol-function 'edebug-make-enter-wrapper)
-              #'names--edebug-make-enter-wrapper))
+  (cl-letf
+      ((max-lisp-eval-depth 3000)
+       (edebug-all-forms t)
+       (edebug-all-defs t)
+       (names--is-inside-macro form)
+       ;; Prevent excessive messaging.
+       ;; TODO: Don't do this if `message' is advised.
+       ((symbol-function 'message) #'names--edebug-message)
+       ;; Older edebugs have poor `get-edebug-spec'.
+       ((symbol-function 'get-edebug-spec) #'names--get-edebug-spec)
+       ;; Give symbols our own name.
+       ((symbol-function 'cl-gensym) #'names--gensym)
+       ;; Stop at one level deep.
+       ((symbol-function 'edebug-form) #'names--edebug-form)
+       ;; Don't actually wrap anything.
+       ((symbol-function 'edebug-make-enter-wrapper)
+        #'names--edebug-make-enter-wrapper))
+    (condition-case nil
+        (with-temp-buffer
+          (pp form 'insert)
+          (goto-char (point-min))
           ;; Do the magic!
-          (edebug-read-top-level-form)))
-    (invalid-read-syntax
-     (names--warn
-      "Couldn't namespace this macro using its (debug ...) declaration: %s"
-      form)
-     form)))
+          (edebug-read-top-level-form))
+      (invalid-read-syntax
+       (names--warn
+        "Couldn't namespace this macro using its (debug ...) declaration: %s"
+        form)
+       form)
+      (error
+       (when (equal (car-safe (cdr-safe er))
+                    "Lisp nesting exceeds `max-lisp-eval-depth'")
+         (names--warn
+          "Lisp nesting exceeded `max-lisp-eval-depth' at the following form: %s"
+          form))
+       form))))
 
 (defvar names--message-backup
   (if (ad-is-advised 'message)
