@@ -479,11 +479,11 @@ See macro `namespace' for more information."
        ;; If kar is a list, either 1) it's a lambda form, 2) it's a
        ;; macro we don't know about yet, 3) we have a bug.
        ((consp kar)
-        (if (and (null (functionp kar))
-                 (> names--current-run 1))
-            (names--warn "Ran into the following strange form.
-Either it's an undefined macro, a macro with a bad debug declaration, or we have a bug.\n%s" form)
-          (mapcar 'names-convert-form form)))
+        (when (and (null (functionp kar))
+                   (> names--current-run 1))
+          (names--warn "Ran into the following strange form.
+Either it's an undefined macro, a macro with a bad debug declaration, or we have a bug.\n%s" form))
+        (mapcar 'names-convert-form form))
 
        ;; Namespaced Functions/Macros
        ((names--fboundp kar)
