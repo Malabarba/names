@@ -766,7 +766,7 @@ phenomenally. So we hack into edebug instead."
        ;; Don't actually wrap anything.
        ((symbol-function 'edebug-make-enter-wrapper)
         #'names--edebug-make-enter-wrapper))
-    (condition-case nil
+    (condition-case er
         (with-temp-buffer
           (pp form 'insert)
           (goto-char (point-min))
