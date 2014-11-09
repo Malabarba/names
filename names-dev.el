@@ -1,9 +1,9 @@
-;;; names-dev.el --- Developer Functions to facilitate use of names.el on your package.
+;;; names-dev.el --- Developer Functions to facilitate use of names.el with your package.
 
 ;; Copyright (C) 2014 Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
-;; URL: http://github.com/Bruce-Connor/spaces
+;; URL: http://github.com/Bruce-Connor/names
 ;; Prefix: names
 ;; Separator: -
 
@@ -18,18 +18,20 @@
 
 ;;; License:
 ;;
-;; This file is NOT part of GNU Emacs.
+;; This file is part of GNU Emacs.
 ;;
-;; This program is free software; you can redistribute it and/or
-;; modify it under the terms of the GNU General Public License
-;; as published by the Free Software Foundation; either version 2
-;; of the License, or (at your option) any later version.
+;; GNU Emacs is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
 ;;
-;; This program is distributed in the hope that it will be useful,
+;; GNU Emacs is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
 ;;
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
 
@@ -164,17 +166,18 @@ to be edebugged."
            (end-of-defun)
            (beginning-of-defun)
            (read (current-buffer)))))
-    (names--wrapped-in-namespace 
+    (names--wrapped-in-namespace
       eval-defun form (null edebug-it))))
 
 
 ;;; eval-last-sexp
-(defalias 'names--preceding-sexp-original (symbol-function 'elisp--preceding-sexp))
+(defalias 'names--preceding-sexp-original
+  (symbol-function 'elisp--preceding-sexp))
 
 (defun names--preceding-sexp ()
   "Like `elisp--preceding-sexp', but expand namespaces."
   (names--wrapped-in-namespace
-    (names--preceding-sexp-original) (names--preceding-sexp-original) t 
+    (names--preceding-sexp-original) (names--preceding-sexp-original) t
     expanded-form))
 
 (defun names-eval-last-sexp (eval-last-sexp-arg-internal)
@@ -232,4 +235,5 @@ Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
      (define-key map [remap eval-print-last-sexp] #'names-eval-print-last-sexp)))
 
 (provide 'names-dev)
-;;; names-dev.el ends here.
+
+;;; names-dev.el ends here

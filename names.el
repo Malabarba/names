@@ -1,10 +1,10 @@
-;;; names.el --- Namespaces for emacs-lisp. Works like C++ namespaces to avoid name clobbering.
+;;; names.el --- Namespaces for emacs-lisp. Avoid name clobbering without hiding symbols.
 
-;; Copyright (C) 2014 Artur Malabarba <bruce.connor.am@gmail.com>
+;; Copyright (C) 2011, 2013 Free Software Foundation, Inc.
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
-;; Version: 0.5.5
+;; Version: 0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: extensions lisp
 ;; Prefix: names
@@ -12,28 +12,29 @@
 
 ;;; Commentary:
 ;;
-;; The description is way too large to sanely write here. Please see
-;; the URL: http://github.com/Bruce-Connor/names
+;; The description is way too large to sanely write here, below is a
+;; summary. For a complete description, please visit the package's
+;; frontpage with `M-x names-view-manual', or see the Readme file on
+;; https://raw.githubusercontent.com/Bruce-Connor/names/master/Readme.org
 
 ;;; License:
 ;;
-;; This file is NOT part of GNU Emacs.
+;; This file is part of GNU Emacs.
 ;;
-;; This program is free software; you can redistribute it and/or
-;; modify it under the terms of the GNU General Public License
-;; as published by the Free Software Foundation; either version 2
-;; of the License, or (at your option) any later version.
+;; GNU Emacs is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
 ;;
-;; This program is distributed in the hope that it will be useful,
+;; GNU Emacs is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
 ;;
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Change Log:
-;; 0.5.2 - 2014/10/20 - Add :version and :package keywords.
-;; 0.5.1 - 2014/10/16 - Add the :group keyword.
-;; 0.5   - 2014/05/20 - First Release.
 ;;; Code:
 
 
@@ -304,53 +305,61 @@ Returns a list (KEYWORD . ARGUMENTLIST)."
 (defmacro define-namespace (name &rest body)
   "Inside the namespace NAME, execute BODY.
 NAME can be any symbol (not quoted), but it's highly recommended
-to use some form of separator (such as :, /, or -).
+to use some form of separator (such as :, /, or -). For a
+complete description of this macro, please visit the frontpage
+with \\[names-view-manual].
 
-This has two main effects:
+In summary, this macro has two main effects:
 
 1. Any definitions inside BODY will have NAME prepended to the
 symbol given. Ex:
-    (define-namespace foo:
+
+    (define-namespace foo-
     (defvar bar 1 \"docs\")
     )
+
 expands to
-    (defvar foo:bar 1 \"docs\")
+
+    (defvar foo-bar 1 \"docs\")
 
 
 2. Any function calls and variable names get NAME prepended to
-them if possible. Ex:
+them if such a variable or function exists. Ex:
+
     (define-namespace foo:
+    (defun message (x y) nil)
     (message \"%s\" my-var)
     )
-expands to
-    (foo:message \"%s\" foo:my-var)
-but only if `foo:message' has a function definition. Similarly,
-`my-var' becomes `foo:my-var', but only if `foo:my-var' has
-a variable definition.
 
-If `foo:message' is not a defined function, the above would
-expand instead to
-    (message \"%s\" foo:my-var)
+expands to
+
+    (defun foo:message (x y) nil)
+    (foo:message \"%s\" my-var)
+
+Note how `message' is expanded to `foo:message' in the second
+form, because that function exists. Meanwhile, `bar' is left
+untouched because `foo:bar' is not a known variable name.
 
 ===============================
 
 AUTOLOAD
 
-In order for `define-namespace' to work with ;;;###autoload
-comments just replace all instances of ;;;###autoload inside your
-`define-namespace' with `:autoload', and then add an ;;;###autoload
-comment just above your `define-namespace'.
+In order for `define-namespace' to work with \";;;###autoload\"
+comments must replace all instances of \";;;###autoload\" inside
+your `define-namespace' with `:autoload'.
+Afterwards, add an \";;;###autoload\" comment just above your
+`define-namespace'.
 
 ===============================
 
 KEYWORDS
 
 Immediately after NAME you may add keywords which customize the
-behaviour of `define-namespace'. For a description of these keywords, see
-the manual on
-http://github.com/Bruce-Connor/names
+behaviour of `define-namespace'. For a list of possible keywords
+and a description of their effects, see the variable
+`names--keyword-list'.
 
-\(fn NAME [KEYWORDS] BODY)"
+\(fn NAME [KEYWORD ...] BODY)"
   (declare (indent (lambda (&rest x) 0))
            (debug (&define name [&rest keywordp &optional [&or symbolp (symbolp . symbolp)]] body)))
   (let ((names--has-reloaded names--has-reloaded))
@@ -508,6 +517,11 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
 
 ;;; ---------------------------------------------------------------
 ;;; Some auxiliary functions
+(defun names-view-manual ()
+  "Call `browse-url' to view the manual of the Names package."
+  (interactive)
+  (browse-url "http://github.com/Bruce-Connor/names"))
+
 (defun names--package-name ()
   "Return the package name as a symbol.
 Decide package name based on several factors. In order:
@@ -542,7 +556,7 @@ Also adds `version' to `names--fbound' and `names--bound'."
          names--version)))
 
 (defun names--add-macro-to-environment (form)
-  "If form declares a macro, add it to `byte-compile-macro-environment'."
+  "If FORM declares a macro, add it to `byte-compile-macro-environment'."
   (let ((expansion form))
     (while (names--compat-macrop (car-safe expansion))
       (setq expansion
@@ -686,22 +700,22 @@ returns nil."
                 (boundp (names--prepend sbl))))))
 
 ;;; This is calling edebug even on `when' and `unless'
-(defun names--args-of-function-or-macro (name args macro)
-  "Check whether NAME is a function or a macro, and handle ARGS accordingly."
+(defun names--args-of-function-or-macro (function args macro)
+  "Namespace FUNCTION's arguments ARGS, with special treatment if MACRO is non-nil."
   (if macro
-      (let ((it (names--get-edebug-spec name))
-            (names--verbose (eq name 'push)))
-        (names--message "Edebug-spec of `%s' is %s" name it)
+      (let ((it (names--get-edebug-spec function))
+            (names--verbose (eq function 'push)))
+        (names--message "Edebug-spec of `%s' is %s" function it)
         ;; Macros where we evaluate all arguments are like functions.
         (if (equal it t)
-            (names--args-of-function-or-macro name args nil)
+            (names--args-of-function-or-macro function args nil)
           ;; Macros where nothing is evaluated we can just return.
           (if (equal it 0)
-              (cons name args)
+              (cons function args)
             ;; Other macros are complicated. Ask edebug for help.
-            (names--macro-args-using-edebug (cons name args)))))
+            (names--macro-args-using-edebug (cons function args)))))
     ;; We just convert the arguments of functions.
-    (cons name (mapcar 'names-convert-form args))))
+    (cons function (mapcar 'names-convert-form args))))
 
 (defun names--get-edebug-spec (name)
   "Get 'edebug-form-spec property of symbol NAME."
@@ -721,13 +735,13 @@ returns nil."
   "Auxiliary var used in `names--macro-args-using-edebug'.")
 
 (defvar names--gensym-counter 0
-  "")
+  "Counter used to uniquify symbols generated `names--gensym'.")
 
 (defun names--macro-args-using-edebug (form)
   "Namespace the arguments of macro FORM by hacking into edebug.
 This takes advantage of the fact that macros (should) declare a
 `debug' specification which tells us which arguments are actually
-lisp forms.
+Elisp forms.
 
 Ideally, we would read this specification ourselves and see how
 it matches (cdr FORM), but that would take a lot of work and
@@ -793,13 +807,13 @@ Use this to easily turn on verbosity during tests.")
             (names--gensym "edebug-anon")))
   (cons 'progn forms))
 
-(defun names--gensym (pfix)
+(defun names--gensym (prefix)
   "Generate a new uninterned symbol.
 The name is made by appending a number to PREFIX and preppending \"names\", default \"G\"."
   (let ((num (prog1 names--gensym-counter
                (setq names--gensym-counter
                      (1+ names--gensym-counter)))))
-    (make-symbol (format "names-%s%d" (if (stringp pfix) pfix "G") num))))
+    (make-symbol (format "names-%s%d" (if (stringp prefix) prefix "G") num))))
 
 (defun names--edebug-form (cursor)
   "Parse form given by CURSOR using edebug, and namespace it if necessary."
@@ -854,7 +868,7 @@ The name is made by appending a number to PREFIX and preppending \"names\", defa
       (edebug-move-cursor cursor))))
 
 (defun names--maybe-append-group (form)
-  "Append :group `names--package' to the form.
+  "Append (:group `names--package') to FORM.
 Only if the :group keyword was passed to `define-namespace' and
 if the form doesn't already have a :group."
   (if (or (null names--group-parent) (memq :group form))
@@ -940,7 +954,8 @@ the keyword arguments, if any."
     form))
 
 (defun names--convert-defvar (form &optional dont-add)
-  "Special treatment for `defvar' FORM."
+  "Special treatment for `defvar' FORM.
+If DONT-ADD is nil, the FORM's `cadr' is added to `names--bound'."
   (let ((name (cadr form)))
     (unless dont-add
       (add-to-list 'names--bound name))
@@ -1225,5 +1240,4 @@ If STAR is non-nil, parse as a `let*'."
     (cddr (cdr form)))))
 
 (provide 'names)
-
 ;;; names.el ends here
