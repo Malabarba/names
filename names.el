@@ -5,7 +5,7 @@
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
 ;; Version: 0
-;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
+;; 
 ;; Keywords: extensions lisp
 ;; Prefix: names
 ;; Separator: -
