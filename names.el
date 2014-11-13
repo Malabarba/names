@@ -1,6 +1,6 @@
 ;;; names.el --- Namespaces for emacs-lisp. Avoid name clobbering without hiding symbols.
 
-;; Copyright (C) 2011, 2013 Free Software Foundation, Inc.
+;; Copyright (C) 2014 Free Software Foundation, Inc.
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names

@@ -1,6 +1,6 @@
 ;;; names-dev.el --- Developer Functions to facilitate use of names.el with your package.
 
-;; Copyright (C) 2014 Artur Malabarba <bruce.connor.am@gmail.com>
+;; Copyright (C) 2014 Free Software Foundation, Inc.
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
