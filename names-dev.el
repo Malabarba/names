@@ -3,6 +3,7 @@
 ;; Copyright (C) 2014 Free Software Foundation, Inc.
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
+;; Maintainer: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
 ;; Prefix: names
 ;; Separator: -
