@@ -3,8 +3,9 @@
 ;; Copyright (C) 2014 Free Software Foundation, Inc.
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
+;; Maintainer: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
-;; Version: 0
+;; Version: 20141119
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: extensions lisp
 ;; Prefix: names
@@ -34,11 +35,20 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-;;; Change Log:
+;;; News:
 ;;; Code:
 
 
 (require 'cl-lib)
+;;; This is a patch because edebug binds under `C-x'.
+;; If `C-x' is not a prefix.
+(unless (consp (key-binding "\C-x"))
+  ;; Disable the `C-xC-a' binds.
+  (setq edebug-inhibit-emacs-lisp-mode-bindings t)
+  ;; And the `C-xX' binds.
+  (when (or (null (boundp 'global-edebug-prefix))
+            (eq 24 (elt global-edebug-prefix 0)))
+    (setq global-edebug-prefix "")))
 (require 'edebug)
 (require 'bytecomp)
 (require 'advice)
@@ -110,7 +120,7 @@ it will set PROP."
 
 ;;; ---------------------------------------------------------------
 ;;; Variables
-(defconst names-version "0.5.5" "Version of the names.el package.")
+(defconst names-version "20141119" "Version of the names.el package.")
 
 (defvar names--name nil
   "Name of the current namespace inside the `define-namespace' macro.")
