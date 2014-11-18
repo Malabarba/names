@@ -40,6 +40,15 @@
 
 
 (require 'cl-lib)
+;;; This is a patch because edebug binds under `C-x'.
+;; If `C-x' is not a prefix.
+(unless (consp (key-binding "\C-x"))
+  ;; Disable the `C-xC-a' binds.
+  (setq edebug-inhibit-emacs-lisp-mode-bindings t)
+  ;; And the `C-xX' binds.
+  (when (or (null (boundp 'global-edebug-prefix))
+            (eq 24 (elt global-edebug-prefix 0)))
+    (setq global-edebug-prefix "")))
 (require 'edebug)
 (require 'bytecomp)
 (require 'advice)
