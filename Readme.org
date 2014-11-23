@@ -1,9 +1,12 @@
 #+OPTIONS: toc:nil num:nil
 
-* Names [[https://secure.travis-ci.org/Bruce-Connor/names.png?branch=master]]
+* Names [[https://travis-ci.org/Bruce-Connor/names?branch=master][https://secure.travis-ci.org/Bruce-Connor/names.png?branch=master]]
 
 *Names* is designed as a practical, complete, robust, and debuggable
 tool which writes your namespaces for you.
+
+It is part of Emacs and is available trough [[https://elpa.gnu.org/packages/names.html][GNU Elpa]], so every
+Emacs user running at least 24.1 has access to it.
 
 [[file:package-example.png]]\\
 /Example usage of Names to namespace an emacs-lisp function./
