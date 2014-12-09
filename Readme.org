@@ -16,14 +16,13 @@ The *Names* package aims to provide an implementation of
 namespaces in Emacs with four guiding principles:
 
 - Practical :: Actually useful and easy to grasp.
-- Completeness :: Support any macro/function/special-form available in
-                  emacs-lisp, even the ones defined by you or a third
-                  party.
-- Robustness :: No-surprises, well-tested, and with clearly stated
-            limitations. Yes, as complete as we aim to be,
-            there will be limitations.
-- Debuggable :: Support *edebug* and =eval-defun=, as well as any
-                other essential tools for package developers.
+- Complete :: Support any macro, function, or special-form available in
+              emacs-lisp, /even/ the ones defined by you or a third
+              party.
+- Robust :: No-surprises, well-tested, and with clearly stated
+            limitations.
+- Debuggable :: Support *edebug* and =eval-defun=, and any other
+                package developing tools.
 
 See [[https://github.com/Bruce-Connor/spaces#why-a-namespace-package][Why a namespace package?]] for a description on why this is
 necessary, and see [[https://github.com/Bruce-Connor/emacs-lisp-namespaces/blob/master/Other-Packages.org][Other-Packages.org]] for a description and comparison
@@ -84,10 +83,10 @@ lack of knowledge by the reader, =names.el= is also acceptable.
 ** Why a namespace package?
 Plain and simple: Emacs doesn't have namespaces, and it needs them.
 
-Nic Ferrier has a [[http://nic.ferrier.me.uk/blog/2013_06/adding-namespaces-to-elisp][great essay on the subject]]. Note that
-*Names* is very different from the solution he proposes, but it does
-solve the problem he had with other alternatives which left the
-debugger unusable.
+Nic Ferrier has a [[http://nic.ferrier.me.uk/blog/2013_06/adding-namespaces-to-elisp][great essay on the subject]], and you might want to
+read [[https://lists.gnu.org/archive/html/emacs-devel/2014-12/msg00772.html][an opposing opinion]] as well. Note that *Names* is very different
+from the solution he proposes, but it does solve the problem he had
+with other alternatives which left the debugger unusable.
 
 Emacs takes the approach of prefixing every symbol name with the name
 of the package. This successfully avoids name clashes between
