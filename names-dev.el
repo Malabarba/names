@@ -118,12 +118,7 @@ If KILL is non-nil, kill the temp buffer afterwards."
               command))
          (entire-namespace
           (save-excursion
-            (when (progn
-                    (end-of-defun)
-                    (beginning-of-defun)
-                    (ignore-errors
-                      (backward-up-list)
-                      (names--looking-at-namespace)))
+            (when (names--top-of-namespace)
               (cdr (read (current-buffer))))))
          b keylist spec name expanded-form)
 
@@ -155,6 +150,14 @@ If KILL is non-nil, kill the temp buffer afterwards."
          ;; Kill the buffer if we won't need it.
          (when (and ,kill (buffer-live-p b))
            (kill-buffer b))))))
+
+(defun names--top-of-namespace ()
+  ""
+  (progn
+    (beginning-of-defun)
+    (ignore-errors
+      (backward-up-list)
+      (names--looking-at-namespace))))
 
 (defun names-eval-defun (edebug-it)
   "Identical to `eval-defun', except it works for forms inside namespaces.
