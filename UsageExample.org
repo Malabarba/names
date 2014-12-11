@@ -83,7 +83,7 @@ To see this expansion yourself.
 
 Follow these steps:
 
-1. Remember to list =names= as a dependency, and =require= it.
+1. Remember to list =names= as a dependency.
 2. Wrap all code that's to be namespaced inside a =(define-namespace NAME ...)= macro.
 3. Pleasantly remove all that redundant repetition from you code!
 4. When quoting function names, use =#' = instead of = ' =.
