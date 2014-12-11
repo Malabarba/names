@@ -584,6 +584,30 @@ Also adds `version' to `names--fbound' and `names--bound'."
                                      (cdr-safe def))
                                byte-compile-macro-environment))))))))
 
+;;;###autoload
+(defadvice find-function-search-for-symbol
+    (around names-around-find-function-search-for-symbol-advice
+            (symbol type library) activate)
+  "Make sure `find-function-search-for-symbol' understands namespaces."
+  ad-do-it
+  (ignore-errors
+    (unless (cdr ad-return-value)
+      (with-current-buffer (car ad-return-value)
+        (search-forward-regexp "^(define-namespace\\_>")
+        (skip-chars-forward "\r\n[:blank:]")
+        (let* ((names--regexp
+                (concat "\\`" (regexp-quote
+                               (symbol-name (read (current-buffer))))))
+               (short-symbol
+                ;; We manually implement `names--remove-namespace'
+                ;; because it might not be loaded.
+                (let ((name (symbol-name symbol)))
+                  (when (string-match names--regexp name)
+                    (intern (replace-match "" nil nil name))))))
+          (when short-symbol
+            (ad-set-arg 0 short-symbol)
+            ad-do-it))))))
+
 (defun names--extract-autoloads (body)
   "Return a list of the forms in BODY preceded by :autoload."
   (let (acons)
@@ -666,7 +690,7 @@ are namespaced become un-namespaced."
   (delq nil (mapcar 'names--remove-namespace (apply 'append lists))))
 
 (defun names--remove-namespace (symbol)
-  "Return SYMBOL with namespace removed, or nil if S wasn't namespaced."
+  "Return SYMBOL with namespace removed, or nil if it wasn't namespaced."
   (names--remove-regexp symbol names--regexp))
 
 (defun names--remove-protection (symbol)
