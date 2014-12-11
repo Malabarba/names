@@ -211,9 +211,7 @@ Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
 (defalias 'find-function-read 'names--find-function-read)
 
 (defun names--find-function-read (&optional type)
-  "Identical to `eval-print-last-sexp', except it works for forms inside namespaces.
-Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
-  (interactive "P")
+  "Identical to `find-function-read', except it works inside namespaces."
   (let ((buf (current-buffer)))
     (names--wrapped-in-namespace
       (names--find-function-read-original type) nil t
