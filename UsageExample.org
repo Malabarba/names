@@ -7,22 +7,14 @@ The important items are already listed in the Readme:
 
 
 #+BEGIN_SRC emacs-lisp
-;;; example-package.el --- Just an example
+;;; example.el --- Just an example
 
 ;;; You have to add this requirement!!
-;; Package-Requires: ((names "0.5"))
-
-;;; Commentary:
-
-;; Bla Bla Bla Bla Bla Bla Bla Bla Bla Bla Bla Bla Bla Bla Bla Bla Bla
-;; Bla Bla Bla Bla
+;; Package-Requires: ((names "0.5") (emacs "24"))
 
 ;;; Code:
 
-;;; Require us. After compilation there will be NO leftover reference
-;;; to the names package.
-
-(eval-when-compile (require 'names))
+;; `define-namespace' is autoloaded, so there's no need to require `names'.
 
 ;;;###autoload
 (define-namespace example-
@@ -33,8 +25,8 @@ The important items are already listed in the Readme:
   "Evaluate BODY, don't evaluate NAME."
   (declare (debug (sexp body-form))
            (indent defun))
-  ;; `example-has-courage' here is inside a quoted
-  ;; form, so it needs to be written explicitly.
+  ;; `example-has-courage' is inside a quoted form, so it needs to be
+  ;; written explicitly.
   `(let ((example-has-courage ',name))
      ,@body))
 
@@ -48,15 +40,13 @@ The important items are already listed in the Readme:
 (defun -fight-internal ()
   "Called by `example-fight'"
   (when has-courage
-    ;; `has-courage' here is will be expanded to
-    ;; `example-has-courage'.
+    ;; `has-courage' here is will be expanded to `example-has-courage'.
     (let ((has-courage nil))
-      ;; Victory!
-      )))
+      (message "Victory!"))))
 )
 
-(provide 'example-package)
-;;; example-package.el ends here
+(provide 'example)
+;;; example.el ends here
 
 #+END_SRC
 
@@ -86,16 +76,14 @@ To see this expansion yourself.
   "Called by `example-fight'"
   (when example-has-courage
     (let ((has-courage nil))
-      ;; Victory!
-      )))
+      (message "Victory!"))))
 #+END_SRC
 
 * Usage Instructions
 
-The
-follow these steps:
+Follow these steps:
 
-1. Remember to list =names= as a dependency, and =require= it.
+1. Remember to list =names= as a dependency.
 2. Wrap all code that's to be namespaced inside a =(define-namespace NAME ...)= macro.
 3. Pleasantly remove all that redundant repetition from you code!
 4. When quoting function names, use =#' = instead of = ' =.

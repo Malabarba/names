@@ -185,7 +185,7 @@ Used to define a constant and a command.")
 (defconst names--keyword-list
   '((:group
      1 (lambda (x)
-         (if (symbolp x)
+         (if (or (symbolp x) (listp x))
              (setq names--group-parent x)
            (names--warn
             "Argument given to :group is not a symbol: %s" x)))
@@ -193,6 +193,10 @@ Used to define a constant and a command.")
 The name of the group is the package name (see :package keyword).
 This keyword should be given one argument, the name of the PARENT
 group as an unquoted symbol.
+
+Alternatively, the argument can be a list, in which case it is a
+list of arguments to be passed to `defgroup' (essentially, a full
+group definition without the leading `defgroup').
 
 If this keyword is provided, besides including a defgroup, Names
 will also include a :group keyword in every `defcustom' (and
@@ -546,10 +550,12 @@ Decide package name based on several factors. In order:
 
 (defun names--generate-defgroup ()
   "Return a `defgroup' form for the current namespace."
-  (list 'defgroup (names--package-name) nil
-        (format "Customization group for %s." (names--package-name))
-        :prefix (symbol-name names--name)
-        :group `',names--group-parent))
+  (if (listp names--group-parent)
+      (cons 'defgroup names--group-parent)
+    (list 'defgroup (names--package-name) nil
+          (format "Customization group for %s." (names--package-name))
+          :prefix (symbol-name names--name)
+          :group `',names--group-parent)))
 
 (defun names--generate-version ()
   "Return a `defun' and a `defconst' forms declaring the package version.
@@ -563,6 +569,8 @@ Also adds `version' to `names--fbound' and `names--bound'."
    (list 'defun (names--prepend 'version) nil
          (format "Version of the %s package." (names--package-name))
          '(interactive)
+         `(message
+           ,(format "%s version: %s" (names--package-name) names--version))
          names--version)))
 
 (defun names--add-macro-to-environment (form)
@@ -583,6 +591,30 @@ Also adds `version' to `names--fbound' and `names--bound'."
                                        (eval (nth 1 expansion)))
                                      (cdr-safe def))
                                byte-compile-macro-environment))))))))
+
+;;;###autoload
+(defadvice find-function-search-for-symbol
+    (around names-around-find-function-search-for-symbol-advice
+            (symbol type library) activate)
+  "Make sure `find-function-search-for-symbol' understands namespaces."
+  ad-do-it
+  (ignore-errors
+    (unless (cdr ad-return-value)
+      (with-current-buffer (car ad-return-value)
+        (search-forward-regexp "^(define-namespace\\_>")
+        (skip-chars-forward "\r\n[:blank:]")
+        (let* ((names--regexp
+                (concat "\\`" (regexp-quote
+                               (symbol-name (read (current-buffer))))))
+               (short-symbol
+                ;; We manually implement `names--remove-namespace'
+                ;; because it might not be loaded.
+                (let ((name (symbol-name symbol)))
+                  (when (string-match names--regexp name)
+                    (intern (replace-match "" nil nil name))))))
+          (when short-symbol
+            (ad-set-arg 0 short-symbol)
+            ad-do-it))))))
 
 (defun names--extract-autoloads (body)
   "Return a list of the forms in BODY preceded by :autoload."
@@ -666,7 +698,7 @@ are namespaced become un-namespaced."
   (delq nil (mapcar 'names--remove-namespace (apply 'append lists))))
 
 (defun names--remove-namespace (symbol)
-  "Return SYMBOL with namespace removed, or nil if S wasn't namespaced."
+  "Return SYMBOL with namespace removed, or nil if it wasn't namespaced."
   (names--remove-regexp symbol names--regexp))
 
 (defun names--remove-protection (symbol)

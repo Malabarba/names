@@ -118,12 +118,7 @@ If KILL is non-nil, kill the temp buffer afterwards."
               command))
          (entire-namespace
           (save-excursion
-            (when (progn
-                    (end-of-defun)
-                    (beginning-of-defun)
-                    (ignore-errors
-                      (backward-up-list)
-                      (names--looking-at-namespace)))
+            (when (names--top-of-namespace)
               (cdr (read (current-buffer))))))
          b keylist spec name expanded-form)
 
@@ -155,6 +150,14 @@ If KILL is non-nil, kill the temp buffer afterwards."
          ;; Kill the buffer if we won't need it.
          (when (and ,kill (buffer-live-p b))
            (kill-buffer b))))))
+
+(defun names--top-of-namespace ()
+  ""
+  (progn
+    (beginning-of-defun)
+    (ignore-errors
+      (backward-up-list)
+      (names--looking-at-namespace))))
 
 (defun names-eval-defun (edebug-it)
   "Identical to `eval-defun', except it works for forms inside namespaces.
@@ -208,9 +211,7 @@ Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
 (defalias 'find-function-read 'names--find-function-read)
 
 (defun names--find-function-read (&optional type)
-  "Identical to `eval-print-last-sexp', except it works for forms inside namespaces.
-Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
-  (interactive "P")
+  "Identical to `find-function-read', except it works inside namespaces."
   (let ((buf (current-buffer)))
     (names--wrapped-in-namespace
       (names--find-function-read-original type) nil t
