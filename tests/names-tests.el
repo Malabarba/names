@@ -237,13 +237,13 @@
    "1.2" :package aim
    (defun foo () (let ((c b)) c)))
   ((defconst a-version "1.2" "Version of the aim package.")
-   (defun a-version () "Version of the aim package." (interactive) "1.2")
+   (defun a-version () "Version of the aim package." (interactive) (message "aim version: 1.2") "1.2")
    (defun a-foo () (let ((c b)) c)))
   (:version
    "1.2"
    (defun foo () (let ((c b)) c)))
   ((defconst a-version "1.2" "Version of the a package.")
-   (defun a-version () "Version of the a package." (interactive) "1.2")
+   (defun a-version () "Version of the a package." (interactive) (message "a version: 1.2") "1.2")
    (defun a-foo () (let ((c b)) c))))
 
 (names-deftest cl-letf
