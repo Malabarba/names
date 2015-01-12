@@ -185,7 +185,7 @@ Used to define a constant and a command.")
 (defconst names--keyword-list
   '((:group
      1 (lambda (x)
-         (if (symbolp x)
+         (if (or (symbolp x) (listp x))
              (setq names--group-parent x)
            (names--warn
             "Argument given to :group is not a symbol: %s" x)))
@@ -193,6 +193,10 @@ Used to define a constant and a command.")
 The name of the group is the package name (see :package keyword).
 This keyword should be given one argument, the name of the PARENT
 group as an unquoted symbol.
+
+Alternatively, the argument can be a list, in which case it is a
+list of arguments to be passed to `defgroup' (essentially, a full
+group definition without the leading `defgroup').
 
 If this keyword is provided, besides including a defgroup, Names
 will also include a :group keyword in every `defcustom' (and
@@ -546,10 +550,12 @@ Decide package name based on several factors. In order:
 
 (defun names--generate-defgroup ()
   "Return a `defgroup' form for the current namespace."
-  (list 'defgroup (names--package-name) nil
-        (format "Customization group for %s." (names--package-name))
-        :prefix (symbol-name names--name)
-        :group `',names--group-parent))
+  (if (listp names--group-parent)
+      (cons 'defgroup names--group-parent)
+    (list 'defgroup (names--package-name) nil
+          (format "Customization group for %s." (names--package-name))
+          :prefix (symbol-name names--name)
+          :group `',names--group-parent)))
 
 (defun names--generate-version ()
   "Return a `defun' and a `defconst' forms declaring the package version.
