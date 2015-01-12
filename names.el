@@ -563,6 +563,8 @@ Also adds `version' to `names--fbound' and `names--bound'."
    (list 'defun (names--prepend 'version) nil
          (format "Version of the %s package." (names--package-name))
          '(interactive)
+         `(message
+           ,(format "%s version: %s" (names--package-name) names--version))
          names--version)))
 
 (defun names--add-macro-to-environment (form)
