@@ -5,7 +5,7 @@
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; Maintainer: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
-;; Version: 20141119
+;; Version: 20150115
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: extensions lisp
 ;; Prefix: names
@@ -120,7 +120,7 @@ it will set PROP."
 
 ;;; ---------------------------------------------------------------
 ;;; Variables
-(defconst names-version "20141119" "Version of the names.el package.")
+(defconst names-version "20150115" "Version of the names.el package.")
 
 (defvar names--name nil
   "Name of the current namespace inside the `define-namespace' macro.")
@@ -183,12 +183,12 @@ Is only non-nil if the :group keyword is passed to `define-namespace'.")
 Used to define a constant and a command.")
 
 (defconst names--keyword-list
-  '((:group
-     1 (lambda (x)
-         (if (or (symbolp x) (listp x))
-             (setq names--group-parent x)
-           (names--warn
-            "Argument given to :group is not a symbol: %s" x)))
+  `((:group
+     1 ,(lambda (x)
+          (if (or (symbolp x) (listp x))
+              (setq names--group-parent x)
+            (names--warn
+             "Argument given to :group is not a symbol: %s" x)))
      "Indicate `define-namespace' should make a `defgroup' for you.
 The name of the group is the package name (see :package keyword).
 This keyword should be given one argument, the name of the PARENT
@@ -204,11 +204,11 @@ similar forms) that don't already contain one.")
 
     (:version
      1
-     (lambda (x)
-       (if (stringp x)
-           (setq names--version x)
-         (names--warn
-          "Argument given to :version is not a string: %s" x)))
+     ,(lambda (x)
+        (if (stringp x)
+            (setq names--version x)
+          (names--warn
+           "Argument given to :version is not a string: %s" x)))
      "Indicate `define-namespace' should define the version number.
 This keyword should be given one argument, a string describing
 the package's version number.
@@ -219,11 +219,11 @@ and returns the version number. See the :package keyword.")
 
     (:package
      1
-     (lambda (x)
-       (if (symbolp x)
-           (setq names--package x)
-         (names--warn
-          "Argument given to :package is not a symbol: %s" x)))
+     ,(lambda (x)
+        (if (symbolp x)
+            (setq names--package x)
+          (names--warn
+           "Argument given to :package is not a symbol: %s" x)))
      "Set the name of this package to the given symbol.
 This keyword should be given one argument, a symbol corresponding
 to the name of this package.
@@ -234,10 +234,10 @@ needed by the :version and :group keywords.")
 
     (:protection
      1
-     (lambda (x)
-       (let ((val (symbol-name x)))
-         (setq names--protection
-               (format "\\`%s" (regexp-quote val)))))
+     ,(lambda (x)
+        (let ((val (symbol-name x)))
+          (setq names--protection
+                (format "\\`%s" (regexp-quote val)))))
      "Change the value of the `names--protection' variable.")
 
     (:no-let-vars
