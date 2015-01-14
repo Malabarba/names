@@ -1059,7 +1059,7 @@ list. And maybe use a :group."
        (nth 2 form)
        (names-convert-form (nth 3 form))
        (names-convert-form (nth 4 form))))
-     (mapcar #'names-convert-form (cddr form)))))
+     (mapcar #'names-convert-form (cddr (cdddr form))))))
 
 (defun names--convert-define-minor-mode (form)
   "Special treatment for `define-minor-mode' FORM."
