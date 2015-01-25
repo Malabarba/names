@@ -176,7 +176,9 @@ to be edebugged."
 
 ;;; eval-last-sexp
 (defalias 'names--preceding-sexp-original
-  (symbol-function 'elisp--preceding-sexp))
+  (if (fboundp 'elisp--preceding-sexp)
+      (symbol-function 'elisp--preceding-sexp)
+    (symbol-function 'preceding-sexp)))
 
 (defun names--preceding-sexp ()
   "Like `elisp--preceding-sexp', but expand namespaces."
@@ -188,19 +190,19 @@ to be edebugged."
   "Identical to `eval-last-sexp', except it works for forms inside namespaces.
 Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-last-sexp'."
   (interactive "P")
-  (cl-letf (((symbol-function 'elisp--preceding-sexp)
-             #'names--preceding-sexp))
+  (cl-letf (((symbol-function 'elisp--preceding-sexp) #'names--preceding-sexp)
+            ((symbol-function 'preceding-sexp) #'names--preceding-sexp))
     (eval-last-sexp eval-last-sexp-arg-internal)))
 
 (defun names-eval-print-last-sexp (eval-last-sexp-arg-internal)
   "Identical to `eval-print-last-sexp', except it works for forms inside namespaces.
 Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
   (interactive "P")
-  (cl-letf (((symbol-function 'elisp--preceding-sexp)
-             #'names--preceding-sexp))
+  (cl-letf (((symbol-function 'elisp--preceding-sexp) #'names--preceding-sexp)
+            ((symbol-function 'preceding-sexp) #'names--preceding-sexp))
     (eval-print-last-sexp eval-last-sexp-arg-internal)))
 
-;; (pp (symbol-function 'names-eval-defun) (current-buffer))
+;; (pp (symbol-function 'names--preceding-sexp-original) (current-buffer))
 
 
 ;;; Find stuff
