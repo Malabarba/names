@@ -1,6 +1,6 @@
 #+OPTIONS: toc:nil num:nil
 
-* Names [[https://travis-ci.org/Bruce-Connor/names?branch=master][https://secure.travis-ci.org/Bruce-Connor/names.png?branch=master]]
+* Names [[https://travis-ci.org/Malabarba/names?branch%3Ddev][https://secure.travis-ci.org/Malabarba/names.png?branch=dev]]
 
 *Names* is designed as a practical, complete, robust, and debuggable
 tool which writes your namespaces for you.
