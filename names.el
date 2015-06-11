@@ -593,28 +593,29 @@ Also adds `version' to `names--fbound' and `names--bound'."
                                byte-compile-macro-environment))))))))
 
 ;;;###autoload
-(defadvice find-function-search-for-symbol
-    (around names-around-find-function-search-for-symbol-advice
-            (symbol type library) activate)
-  "Make sure `find-function-search-for-symbol' understands namespaces."
-  ad-do-it
-  (ignore-errors
-    (unless (cdr ad-return-value)
-      (with-current-buffer (car ad-return-value)
-        (search-forward-regexp "^(define-namespace\\_>")
-        (skip-chars-forward "\r\n[:blank:]")
-        (let* ((names--regexp
-                (concat "\\`" (regexp-quote
-                               (symbol-name (read (current-buffer))))))
-               (short-symbol
-                ;; We manually implement `names--remove-namespace'
-                ;; because it might not be loaded.
-                (let ((name (symbol-name symbol)))
-                  (when (string-match names--regexp name)
-                    (intern (replace-match "" nil nil name))))))
-          (when short-symbol
-            (ad-set-arg 0 short-symbol)
-            ad-do-it))))))
+(eval-after-load 'find-func
+  '(defadvice find-function-search-for-symbol
+       (around names-around-find-function-search-for-symbol-advice
+               (symbol type library) activate)
+     "Make sure `find-function-search-for-symbol' understands namespaces."
+     ad-do-it
+     (ignore-errors
+       (unless (cdr ad-return-value)
+         (with-current-buffer (car ad-return-value)
+           (search-forward-regexp "^(define-namespace\\_>")
+           (skip-chars-forward "\r\n[:blank:]")
+           (let* ((names--regexp
+                   (concat "\\`" (regexp-quote
+                                  (symbol-name (read (current-buffer))))))
+                  (short-symbol
+                   ;; We manually implement `names--remove-namespace'
+                   ;; because it might not be loaded.
+                   (let ((name (symbol-name symbol)))
+                     (when (string-match names--regexp name)
+                       (intern (replace-match "" nil nil name))))))
+             (when short-symbol
+               (ad-set-arg 0 short-symbol)
+               ad-do-it)))))))
 
 (defun names--extract-autoloads (body)
   "Return a list of the forms in BODY preceded by :autoload."
