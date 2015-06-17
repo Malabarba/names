@@ -139,6 +139,41 @@ need to worry about, it should just do what you expect from it.
 
 This is only relevant if you write your own macros. If you do,
 remember to add a debug declaration in them.
+
+*** The theading macros (~->~ and ~-->~)
+
+The threading macros would require special treatment to namespace
+correctly. However, you can use the ~:functionlike-macros~ keyword to
+tell *Names* to treat them as regular functions.
+
+For example, in the following snippet:
+#+BEGIN_SRC emacs-lisp
+(require 'dash)
+(define-namespace foo-
+:functionlike-macros (-> ->>)
+
+(defvar var nil)
+(defun fun (x &optional y)
+  (concat x y))
+
+(-> "some string"
+    (fun var)
+    fun)
+)
+#+END_SRC
+the ~(fun var)~ part would be namespaced prefectly fine (~fun~ and
+~var~ will be identified as a function and variable respectively),
+because it looks like a regular function call. However, the second use
+of ~fun~ will not be correctly namespaced, because that ~fun~ looks
+like a variable.
+
+In other words, you should use these macros like this instead:
+#+BEGIN_SRC emacs-lisp
+(-> "some string"
+    (fun var)
+    (fun))
+#+END_SRC
+
 ** Accessing Global Symbols
 If one of your definitions shadows a global definition, you can still
 access it by prefixing it with =::=.
