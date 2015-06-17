@@ -5,7 +5,7 @@
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; Maintainer: Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/Bruce-Connor/names
-;; Version: 20150125.9
+;; Version: 20150617.0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: extensions lisp
 ;; Prefix: names
@@ -120,7 +120,7 @@ it will set PROP."
 
 ;;; ---------------------------------------------------------------
 ;;; Variables
-(defconst names-version "20150125.9" "Version of the names.el package.")
+(defconst names-version "20150617.0" "Version of the names.el package.")
 
 (defvar names--name nil
   "Name of the current namespace inside the `define-namespace' macro.")
@@ -182,6 +182,22 @@ Is only non-nil if the :group keyword is passed to `define-namespace'.")
   "The version number given by :version.
 Used to define a constant and a command.")
 
+(defvar names--functionlike-macros nil
+  "Function-like macros, even if their debug-spec says otherwise.
+When expanding the namespace, these macros will be treated
+exactly like functions. This means that their contents will be
+namespaced like regular function arguments.
+
+To add macros to this list, pass the :functionlike-macros keyword
+to your namespace along with a list of macro names (as unquoted
+symbols).
+Example:
+
+    (define-namespace foo-
+    :functionlike-macros (-> ->> thread-first thread-last)
+    ;; Rest of code
+    )")
+
 (defconst names--keyword-list
   `((:group
      1 ,(lambda (x)
@@ -239,6 +255,12 @@ needed by the :version and :group keywords.")
           (setq names--protection
                 (format "\\`%s" (regexp-quote val)))))
      "Change the value of the `names--protection' variable.")
+
+    (:functionlike-macros
+     1
+     ,(lambda (x) (setq names--functionlike-macros
+                   (append x names--functionlike-macros)))
+     "A list of values to be appended to `names--functionlike-macros'.")
 
     (:no-let-vars
      0 nil
@@ -407,6 +429,7 @@ See `define-namespace' for more information."
               (names--remove-namespace-from-list
                (names--filter-if-bound byte-compile-macro-environment (lambda (x) (not (names--compat-macrop x))))
                (names--filter-if-bound byte-compile-function-environment (lambda (x) (not (names--compat-macrop x))))))
+             (names--functionlike-macros names--functionlike-macros)
              names--keywords names--local-vars key-and-args
              names--version names--package names--group-parent)
         ;; Read keywords
@@ -742,7 +765,6 @@ returns nil."
            (and (names--keyword :global)
                 (boundp (names--prepend sbl))))))
 
-;;; This is calling edebug even on `when' and `unless'
 (defun names--args-of-function-or-macro (function args macro)
   "Namespace FUNCTION's arguments ARGS, with special treatment if MACRO is non-nil."
   (if macro
@@ -750,7 +772,8 @@ returns nil."
             (names--verbose (eq function 'push)))
         (names--message "Edebug-spec of `%s' is %s" function it)
         ;; Macros where we evaluate all arguments are like functions.
-        (if (equal it t)
+        (if (or (equal it t)
+                (memq function names--functionlike-macros))
             (names--args-of-function-or-macro function args nil)
           ;; Macros where nothing is evaluated we can just return.
           (if (equal it 0)
