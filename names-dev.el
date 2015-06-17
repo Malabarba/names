@@ -152,12 +152,17 @@ If KILL is non-nil, kill the temp buffer afterwards."
            (kill-buffer b))))))
 
 (defun names--top-of-namespace ()
-  ""
-  (progn
-    (beginning-of-defun)
-    (ignore-errors
-      (backward-up-list))
-    (names--looking-at-namespace)))
+  "Move to the top of current namespace, and return non-nil.
+If not inside a namespace, return nil and don't move point."
+  (let ((top (save-excursion
+               (beginning-of-defun)
+               (ignore-errors
+                 (backward-up-list))
+               (when (names--looking-at-namespace)
+                 (point)))))
+    (when top
+      (goto-char top)
+      t)))
 
 (defun names-eval-defun (edebug-it)
   "Identical to `eval-defun', except it works for forms inside namespaces.
@@ -207,11 +212,11 @@ Argument EVAL-LAST-SEXP-ARG-INTERNAL is the same as `eval-print-last-sexp'."
 (defun names-pprint ()
   "Pretty-print an expansion of the namespace around point."
   (interactive)
-  (let ((ns (save-excursion
-              (names--top-of-namespace)
-              (cdr-safe (read (current-buffer))))))
-    (pp-macroexpand-expression
-     (macroexpand (cons 'names-print ns)))))
+  (save-excursion
+    (when (names--top-of-namespace)
+      (let ((ns (cdr (read (current-buffer)))))
+        (pp-macroexpand-expression
+         (macroexpand (cons 'names-print ns)))))))
 
 
 ;;; Find stuff
