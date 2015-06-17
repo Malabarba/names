@@ -277,3 +277,16 @@
    (defcustom a-hi 1 "hi" :type 'boolean :group 'names-tests :package-version '(names-tests . ""))
    (defcustom a-ok 1 "hi" :type 'boolean :package-version '(names-tests . "") :group 'a)))
 
+(names-deftest functionlike-macros
+  ""
+  (:functionlike-macros
+   (thread-first ->>)
+   (defvar var nil)
+   (defun fun (x &optional y) (concat x y))
+   (thread-first (fun "some string" var) (fun var) fun)
+   (->> "some string" (fun var) fun))
+  ((defvar a-var nil)
+   (defun a-fun (x &optional y) (concat x y))
+   (thread-first (a-fun "some string" a-var) (a-fun a-var) fun)
+   (->> "some string" (a-fun a-var) fun)))
+
