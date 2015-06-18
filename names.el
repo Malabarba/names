@@ -82,7 +82,8 @@ it will set PROP."
     (defalias 'names--compat-macrop #'macrop)
   (defun names--compat-macrop (object)
     "Non-nil if and only if OBJECT is a macro."
-    (let ((def (indirect-function object t)))
+    (let ((def (or (ignore-errors (indirect-function object t))
+                   (ignore-errors (indirect-function object)))))
       (when (consp def)
         (or (eq 'macro (car def))
             (and (names--autoloadp def) (memq (nth 4 def) '(macro t))))))))
@@ -765,6 +766,10 @@ returns nil."
            (and (names--keyword :global)
                 (boundp (names--prepend sbl))))))
 
+(defvar names--verbose nil
+  "If non-nil, verbose message are printed regardless of the :verbose keyword.
+Use this to easily turn on verbosity during tests.")
+
 (defun names--args-of-function-or-macro (function args macro)
   "Namespace FUNCTION's arguments ARGS, with special treatment if MACRO is non-nil."
   (if macro
@@ -857,14 +862,10 @@ phenomenally. So we hack into edebug instead."
     (symbol-function 'message))
   "Where names stores `message's definition while overriding it.")
 
-(defvar names--verbose nil
-  "If non-nil, verbose message are printed regardless of the :verbose keyword.
-Use this to easily turn on verbosity during tests.")
-
-(defun names--edebug-message (&rest _)
+(defun names--edebug-message (&rest args)
   (if (or (names--keyword :verbose) names--verbose)
-      (apply names--message-backup _)
-    (when _ (apply 'format _))))
+      (apply names--message-backup args)
+    (when args (apply #'format args))))
 
 (defun names--edebug-make-enter-wrapper (forms)
   (setq edebug-def-name
