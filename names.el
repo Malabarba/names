@@ -48,8 +48,9 @@
   (setq edebug-inhibit-emacs-lisp-mode-bindings t)
   ;; And the `C-xX' binds.
   (defvar global-edebug-prefix)
-  (when (or (null (boundp 'global-edebug-prefix))
-            (eq ?\C-x (elt global-edebug-prefix 0)))
+  (when (ignore-errors
+          (or (null (boundp 'global-edebug-prefix))
+              (eq ?\C-x (elt global-edebug-prefix 0))))
     (setq global-edebug-prefix "")))
 (require 'edebug)
 (require 'bytecomp)
