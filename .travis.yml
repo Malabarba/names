@@ -33,6 +33,8 @@ env:
   - EMACS=emacs-24.1-bin METHOD=evm
   - EMACS=emacs-24.2-bin METHOD=evm
   - EMACS=emacs-24.3-bin METHOD=evm
+  - EMACS=emacs-24.4-bin METHOD=evm
+  - EMACS=emacs-24.5-bin METHOD=evm
   - EMACS=emacs24 METHOD=manual
   - EMACS=emacs-snapshot METHOD=manual
 
