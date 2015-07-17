@@ -2,6 +2,8 @@
 ;;
 ;;; Code:
 
+(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+
 
 ;;;### (autoloads (aggressive-indent-) "aggressive-indent" "aggressive-indent.el"
 ;;;;;;  (21587 41662 658130 132000))
@@ -54,7 +56,6 @@ See `aggressive-indent-mode' for more information on Aggressive-Indent mode.
 
 ;;;***
 
-(provide 'aggressive-indent-autoloads)
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
