@@ -444,8 +444,15 @@ See `define-namespace' for more information."
           (push key-and-args names--keywords))
 
         ;; First have to populate the bound and fbound lists. So we read
-        ;; the entire form (without evaluating it).
-        (mapc 'names-convert-form body)
+        ;; the entire form (without return it).
+        (if names--inside-make-autoload
+            ;; Dependencies haven't been loaded during autoload
+            ;; generation, so we better ignore errors here. Ideally we
+            ;; would only go through the forms marked for autoloading,
+            ;; but then we wouldn't know what symbols are var/function
+            ;; names.
+            (mapc (lambda (form) (ignore-errors (names-convert-form form))) body)
+          (mapc #'names-convert-form body))
         (setq names--current-run (1+ names--current-run))
 
         ;; Then we go back and actually namespace the entire form, which
