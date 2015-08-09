@@ -10,7 +10,7 @@ The important items are already listed in the Readme:
 ;;; example.el --- Just an example
 
 ;;; You have to add this requirement!!
-;; Package-Requires: ((names "0.5") (emacs "24"))
+;; Package-Requires: ((names "Lookup.Latest.Version") (emacs "24"))
 
 ;;; Code:
 
