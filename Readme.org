@@ -5,7 +5,7 @@
 *Names* is designed as a practical, complete, robust, and debuggable
 tool which writes your namespaces for you.
 
-It is part of Emacs and is available trough [[https://elpa.gnu.org/packages/names.html][GNU Elpa]], so every
+It is part of Emacs and is available through [[https://elpa.gnu.org/packages/names.html][GNU Elpa]], so every
 Emacs user running at least 24.1 has access to it.
 
 [[file:package-example.png]]\\
@@ -57,14 +57,14 @@ To access them add the following line to your init file.
 First and foremost, the =edebug-eval-defun= command (bound to =C-u
 C-M-x=) is an essential tool for any package developer. *Names*
 wouldn't be a very useful utility if it prevented you from using this
-asset. 
+asset.
 
 Therefore, it provides the =names-eval-defun= command, which is
 identical to =edebug-eval-defun= except it also works inside
 namespaces. It will automatically be added to your
 =emacs-lisp-mode-map=.
 
-*** Font-locking 
+*** Font-locking
 Font-lock for =define-namespace= and =:autoload=.
 
 *** Expansion and comparison functions
@@ -114,7 +114,7 @@ it goes]].
 - *Reduction in code size:* Approx. 2000 characters.
 **** s.el
 - *Number of ert tests passed:* All.
-- *Reduction in code size:* Approx. 1000 characters (8%). 
+- *Reduction in code size:* Approx. 1000 characters (8%).
 1000 characters is a lot when you consider /s.el/ has the second
 shortest namespace possible, =s-=.
 **** dash.el
