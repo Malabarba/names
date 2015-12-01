@@ -3,8 +3,8 @@
 ;; Copyright (C) 2014-2015 Free Software Foundation, Inc.
 
 ;; Author: Artur Malabarba <emacs@endlessparentheses.com>
-;; URL: https://github.com/Bruce-Connor/names
-;; Version: 20150723.0
+;; URL: https://github.com/Malabarba/names
+;; Version: 20151201.0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: extensions lisp
 
@@ -13,7 +13,7 @@
 ;; The description is way too large to sanely write here, below is a
 ;; summary. For a complete description, please visit the package's
 ;; frontpage with `M-x names-view-manual', or see the Readme file on
-;; https://raw.githubusercontent.com/Bruce-Connor/names/master/Readme.org
+;; https://raw.githubusercontent.com/Malabarba/names/master/Readme.org
 
 ;;; License:
 ;;
@@ -123,7 +123,7 @@ it will set PROP."
 
 ;;; ---------------------------------------------------------------
 ;;; Variables
-(defconst names-version "20150723.0" "Version of the names.el package.")
+(defconst names-version "20151201.0" "Version of the names.el package.")
 
 (defvar names--name nil
   "Name of the current namespace inside the `define-namespace' macro.")
@@ -567,7 +567,7 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
 (defun names-view-manual ()
   "Call `browse-url' to view the manual of the Names package."
   (interactive)
-  (browse-url "http://github.com/Bruce-Connor/names"))
+  (browse-url "http://github.com/Malabarba/names"))
 
 (defun names--package-name ()
   "Return the package name as a symbol.
