@@ -1,17 +1,17 @@
 ;;; names.el --- Namespaces for emacs-lisp. Avoid name clobbering without hiding symbols.  -*- lexical-binding:t -*-
 
-;; Copyright (C) 2014-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2014-2018 Free Software Foundation, Inc.
 
 ;; Author: Artur Malabarba <emacs@endlessparentheses.com>
 ;; URL: https://github.com/Malabarba/names
 ;; Version: 20151201.0
-;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
+;; Package-Requires: ((emacs "24.1") (cl-lib "0.5") (nadvice "0.3"))
 ;; Keywords: extensions lisp
 
 ;;; Commentary:
 ;;
 ;; The description is way too large to sanely write here, below is a
-;; summary. For a complete description, please visit the package's
+;; summary.  For a complete description, please visit the package's
 ;; frontpage with `M-x names-view-manual', or see the Readme file on
 ;; https://raw.githubusercontent.com/Malabarba/names/master/Readme.org
 
@@ -51,7 +51,6 @@
     (setq global-edebug-prefix "")))
 (require 'edebug)
 (require 'bytecomp)
-(require 'advice)
 
 ;;; Support
 (declare-function names--autoload-do-load "names" 2)
@@ -84,8 +83,7 @@ it will set PROP."
   (if (fboundp 'macrop) #'macrop
     (lambda (object)
       "Non-nil if and only if OBJECT is a macro."
-      (let ((def (or (ignore-errors (indirect-function object t))
-                     (ignore-errors (indirect-function object)))))
+      (let ((def (ignore-errors (indirect-function object))))
         (when (consp def)
           (or (eq 'macro (car def))
               (and (names--autoloadp def) (memq (nth 4 def) '(macro t)))))))))
@@ -168,7 +166,6 @@ namespace.")
                 names--local-vars names--protection)
   "List of variables the user shouldn't touch.")
 
-;;;###autoload
 (defvar names--inside-make-autoload nil
   "Used in `make-autoload' to indicate we're making autoloads.")
 
@@ -188,7 +185,7 @@ Used to define a constant and a command.")
 (defvar names--functionlike-macros nil
   "Function-like macros, even if their debug-spec says otherwise.
 When expanding the namespace, these macros will be treated
-exactly like functions. This means that their contents will be
+exactly like functions.  This means that their contents will be
 namespaced like regular function arguments.
 
 To add macros to this list, pass the :functionlike-macros keyword
@@ -344,14 +341,14 @@ Returns a list (KEYWORD . ARGUMENTLIST)."
 (defmacro define-namespace (name &rest body)
   "Inside the namespace NAME, execute BODY.
 NAME can be any symbol (not quoted), but it's highly recommended
-to use some form of separator (such as :, /, or -). For a
+to use some form of separator (such as :, /, or -).  For a
 complete description of this macro, please visit the frontpage
 with \\[names-view-manual].
 
 In summary, this macro has two main effects:
 
 1. Any definitions inside BODY will have NAME prepended to the
-symbol given. Ex:
+symbol given.  Ex:
 
     (define-namespace foo-
     (defvar bar 1 \"docs\")
@@ -363,7 +360,7 @@ expands to
 
 
 2. Any function calls and variable names get NAME prepended to
-them if such a variable or function exists. Ex:
+them if such a variable or function exists.  Ex:
 
     (define-namespace foo:
     (defun message (x y) nil)
@@ -376,7 +373,7 @@ expands to
     (foo:message \"%s\" my-var)
 
 Note how `message' is expanded to `foo:message' in the second
-form, because that function exists. Meanwhile, `bar' is left
+form, because that function exists.  Meanwhile, `bar' is left
 untouched because `foo:bar' is not a known variable name.
 
 ===============================
@@ -442,14 +439,15 @@ See `define-namespace' for more information."
 
         ;; First have to populate the bound and fbound lists. So we read
         ;; the entire form (without return it).
-        (if names--inside-make-autoload
-            ;; Dependencies haven't been loaded during autoload
-            ;; generation, so we better ignore errors here. Ideally we
-            ;; would only go through the forms marked for autoloading,
-            ;; but then we wouldn't know what symbols are var/function
-            ;; names.
-            (mapc (lambda (form) (ignore-errors (names-convert-form form))) body)
-          (mapc #'names-convert-form body))
+        (mapc (if names--inside-make-autoload
+                  ;; Dependencies haven't been loaded during autoload
+                  ;; generation, so we better ignore errors here. Ideally we
+                  ;; would only go through the forms marked for autoloading,
+                  ;; but then we wouldn't know what symbols are var/function
+                  ;; names.
+                  (lambda (form) (ignore-errors (names-convert-form form)))
+                #'names-convert-form)
+              body)
         (setq names--current-run (1+ names--current-run))
 
         ;; Then we go back and actually namespace the entire form, which
@@ -465,7 +463,7 @@ See `define-namespace' for more information."
                            (null (names--keyword :clean-output)))
                   ;; `names--generate-version' returns a list.
                   (names--generate-version))
-                (mapcar 'names-convert-form
+                (mapcar #'names-convert-form
                         ;; Unless we're in `make-autoload', then just return autoloads.
                         (if names--inside-make-autoload
                             (names--extract-autoloads body)
@@ -571,7 +569,7 @@ Either it's an undefined macro, a macro with a bad debug declaration, or we have
 
 (defun names--package-name ()
   "Return the package name as a symbol.
-Decide package name based on several factors. In order:
+Decide package name based on several factors.  In order:
     1. The :package keyword,
     2. The namespace NAME, removing the final char."
   (or names--package
@@ -618,37 +616,39 @@ Also adds `version' to `names--fbound' and `names--bound'."
          (or (and (memq (car-safe expansion) '(progn prog1 prog2))
                   (mapc #'names--add-macro-to-environment (cdr expansion)))
              (and (eq 'defalias (car-safe expansion))
-                  (let ((def (ignore-errors (eval (nth 2 expansion)))))
+                  (let ((def (ignore-errors (eval (nth 2 expansion) t))))
                     (and (names--compat-macrop def)
                          (push (cons (ignore-errors
-                                       (eval (nth 1 expansion)))
+                                       (eval (nth 1 expansion) t))
                                      (cdr-safe def))
                                byte-compile-macro-environment))))))))
 
 ;;;###autoload
 (eval-after-load 'find-func
-  '(defadvice find-function-search-for-symbol
-       (around names-around-find-function-search-for-symbol-advice
-               (symbol type library) activate)
-     "Make sure `find-function-search-for-symbol' understands namespaces."
-     ad-do-it
-     (ignore-errors
-       (unless (cdr ad-return-value)
-         (with-current-buffer (car ad-return-value)
-           (search-forward-regexp "^(define-namespace\\_>")
-           (skip-chars-forward "\r\n[:blank:]")
-           (let* ((names--regexp
-                   (concat "\\`" (regexp-quote
-                                  (symbol-name (read (current-buffer))))))
-                  (short-symbol
-                   ;; We manually implement `names--remove-namespace'
-                   ;; because it might not be loaded.
-                   (let ((name (symbol-name symbol)))
-                     (when (string-match names--regexp name)
-                       (intern (replace-match "" nil nil name))))))
-             (when short-symbol
-               (ad-set-arg 0 short-symbol)
-               ad-do-it)))))))
+  '(progn
+     (advice-add 'find-function-search-for-symbol :around
+                 #'names--around-find-function-search-for-symbol-advice)
+     (defun names--around-find-function-search-for-symbol-advice
+         (orig-fun symbol type library)
+       "Make sure `find-function-search-for-symbol' understands namespaces."
+       (let ((res (funcall orig-fun symbol type library)))
+         (ignore-errors
+           (if (cdr res)
+               res
+             (with-current-buffer (car res)
+               (search-forward-regexp "^(define-namespace\\_>")
+               (skip-chars-forward "\r\n[:blank:]")
+               (let* ((names--regexp
+                       (concat "\\`" (regexp-quote
+                                      (symbol-name (read (current-buffer))))))
+                      (short-symbol
+                       ;; We manually implement `names--remove-namespace'
+                       ;; because it might not be loaded.
+                       (let ((name (symbol-name symbol)))
+                         (when (string-match names--regexp name)
+                           (intern (replace-match "" nil nil name))))))
+                 (when short-symbol
+                   (funcall orig-fun short-symbol type library))))))))))
 
 (defun names--extract-autoloads (body)
   "Return a list of the forms in BODY preceded by :autoload."
@@ -659,30 +659,31 @@ Also adds `version' to `names--fbound' and `names--bound'."
        (names--extract-autoloads (cdr (cdr acons)))))))
 
 ;;;###autoload
-(defadvice make-autoload (around names-before-make-autoload-advice
-                                 (form file &optional expansion) activate)
-  "Make sure `make-autoload' understands `define-namespace'.
+(eval-after-load 'autoload
+  '(progn
+     (advice-add 'make-autoload :around #'names--before-make-autoload-advice)
+     (defun names--before-make-autoload-advice
+         (orig-fun form file &optional expansion)
+       "Make sure `make-autoload' understands `define-namespace'.
 Use the `names--inside-make-autoload' variable to indicate to
 `define-namespace' that we're generating autoloads."
-  ;; We used to have a letbind here, but this was causing a void
-  ;; variable bug on Emacs 24.3.
-  (require 'names)
-  (if (null (eq (car-safe form) 'define-namespace))
-      ad-do-it
-    (setq names--inside-make-autoload t)
-    (setq form (macroexpand form))
-    (setq names--inside-make-autoload nil)
-    ;; Up to 24.2 `make-autoload' couldn't handle `progn's.
-    (if (version< emacs-version "24.3")
-        (setq ad-return-value
-              (cons 'progn
-                    (mapcar (lambda (x) (names--make-autoload-compat x file))
-                            (cdr form))))
-      (ad-set-arg 2 'expansion)
-      (ad-set-arg 0 form)
-      ad-do-it)))
+       ;; We used to have a letbind here, but this was causing a void
+       ;; variable bug on Emacs 24.3.
+       (require 'names)
+       (if (null (eq (car-safe form) 'define-namespace))
+           (funcall orig-fun form file expansion)
+         (setq names--inside-make-autoload t)
+         (setq form (macroexpand form))
+         (setq names--inside-make-autoload nil)
+         ;; Up to 24.2 `make-autoload' couldn't handle `progn's.
+         (if (version< emacs-version "24.3")
+             (cons 'progn
+                   (mapcar (lambda (x) (names--make-autoload-compat x file))
+                           (cdr form)))
+           (funcall orig-fun form file 'expansion))))))
 
 (defun names--make-autoload-compat (form file)
+  (declare-function make-autoload "autoload" (form file &optional expansion))
   (if (eq (car-safe form) 'defalias)
       form
     (make-autoload form file)))
@@ -720,7 +721,7 @@ Use the `names--inside-make-autoload' variable to indicate to
   "Remind the developer that variables are not customizable."
   (mapcar
    (lambda (x)
-     (when (eval x)
+     (when (eval x t)
        (error "[names] Global value of variable %s should be nil! %s"
               x "Set it using keywords instead")))
    names--var-list))
@@ -826,9 +827,8 @@ Elisp forms.
 Ideally, we would read this specification ourselves and see how
 it matches (cdr FORM), but that would take a lot of work and
 we'd be reimplementing something that edebug already does
-phenomenally. So we hack into edebug instead."
+phenomenally.  So we hack into edebug instead."
   (require 'edebug)
-  (require 'cl-lib)
   (cl-letf
       ((max-lisp-eval-depth 3000)
        (edebug-all-forms t)
@@ -866,9 +866,15 @@ phenomenally. So we hack into edebug instead."
        form))))
 
 (defvar names--message-backup
-  (if (ad-is-advised 'message)
-      (ad-get-orig-definition 'message)
-    (symbol-function 'message))
+  (let ((f (symbol-function 'message)))
+    (cond
+     ((fboundp 'advice--cd*r) (advice--cd*r f))
+     ((fboundp 'ad-is-advised)
+      (declare-function ad-get-orig-definition "advice")
+      (if (ad-is-advised 'message)
+          (ad-get-orig-definition 'message)
+        f))
+     (t f)))
   "Where names stores `message's definition while overriding it.")
 
 (defun names--edebug-message (&rest args)
@@ -956,7 +962,7 @@ if the form doesn't already have a :group."
 ;;; Interpreting keywords passed to the main macro.
 (defun names--handle-keyword (body)
   "Call the function that handles the keyword at the car of BODY.
-Such function must be listed in `names--keyword-list'. If it is
+Such function must be listed in `names--keyword-list'.  If it is
 nil, this function just returns.
 
 Regardless of whether a function was called, the keyword is added
@@ -1012,7 +1018,7 @@ the keyword arguments, if any."
                     (mapcar #'names-convert-form (cdr form))))
         (name))
     (setq name (names--remove-namespace
-                (ignore-errors (eval (cadr form)))))
+                (ignore-errors (eval (cadr form) t))))
     (when name
       (add-to-list 'names--bound name))
     form))
@@ -1023,7 +1029,7 @@ the keyword arguments, if any."
                     (mapcar #'names-convert-form (cdr form))))
         (name))
     (setq name (names--remove-namespace
-                (ignore-errors (eval (cadr form)))))
+                (ignore-errors (eval (cadr form) t))))
     (when name
       (add-to-list 'names--fbound name))
     form))
@@ -1050,7 +1056,7 @@ If DONT-ADD is nil, the FORM's `cadr' is added to `names--bound'."
 
 (defun names--convert-custom-declare-variable (form)
   "Special treatment for `custom-declare-variable' FORM."
-  (let ((name (eval (cadr form))) ;;ignore-errors
+  (let ((name (eval (cadr form) t)) ;;ignore-errors
         (val (car (cddr form))))
     (add-to-list 'names--bound name)
     (append
@@ -1070,7 +1076,7 @@ If DONT-ADD is nil, the FORM's `cadr' is added to `names--bound'."
 (defun names--convert-defface (form)
   "Special treatment for `defface' FORM.
 Identical to defvar, just doesn't add the symbol to the boundp
-list. And maybe use a :group."
+list.  And maybe use a :group."
   (names--maybe-append-group
    (names--convert-defvar form :dont-add)))
 
