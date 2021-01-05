@@ -1,6 +1,6 @@
 #+OPTIONS: toc:nil num:nil
 
-* Names [[https://travis-ci.org/Malabarba/names?branch%3Dmaster][https://secure.travis-ci.org/Malabarba/names.png?branch=master]]
+* Names [[https://travis-ci.org/Malabarba/names?branch%3Dmaster][https://secure.travis-ci.org/Malabarba/names.png?branch=master]] [[https://melpa.org/#/names][file:https://melpa.org/packages/names-badge.svg]] [[https://stable.melpa.org/#/names][file:https://stable.melpa.org/packages/names-badge.svg]]
 
 *Names* is designed as a practical, complete, robust, and debuggable
 tool which writes your namespaces for you.
