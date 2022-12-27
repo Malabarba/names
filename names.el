@@ -1252,6 +1252,7 @@ Return (macro . (names-convert-form (cdr FORM)))."
           (names--convert-lambda
            (cons (names--prepend name) (cddr form))))))
 (defalias 'names--convert-defun* 'names--convert-defun)
+(defalias 'names--convert-cl-defun 'names--convert-defun)
 (defalias 'names--convert-defsubst 'names--convert-defun)
 (defalias 'names--convert-defsubst* 'names--convert-defun)
 
