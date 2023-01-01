@@ -1043,6 +1043,9 @@ If DONT-ADD is nil, the FORM's `cadr' is added to `names--bound'."
 (defalias 'names--convert-defconst 'names--convert-defvar
   "Special treatment for `defconst' FORM.")
 
+(defalias 'names--convert-defvar-local 'names--convert-defvar
+    "Special treatment for `defvar-local' FORM.")
+
 (defun names--convert-defcustom (form)
   "Special treatment for `defcustom' FORM."
   (names--maybe-append-group
